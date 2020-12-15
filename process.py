@@ -85,6 +85,29 @@ def mark_as_processed(capture_id):
 
     except Exception as e:
         print(e)
+
+def agg_interactions():
+    with engine.connect() as conn:
+        query = """
+        INSERT INTO KP_Interactions
+        SELECT
+            i.capture_id,
+            c.start as capture_start,
+            i.session_id,
+            client_id,
+            source_id,
+            target_id, 
+            it.type,
+            count(*) as count
+        FROM komodo.interactions i
+        JOIN komodo.interaction_types it ON i.interaction_type = it.id
+        JOIN komodo.captures c ON i.capture_id = c.capture_id
+        GROUP BY capture_id, c.start, session_id, client_id, source_id, target_id, it.type
+        ORDER BY capture_id, c.start, session_id, client_id, source_id, target_id, it.type;
+        """
+        result = conn.execute(query)
+        print("agg result" + str(result))
+        return
         
 if __name__ == "__main__":
     # infinite poll & process
@@ -98,8 +121,9 @@ if __name__ == "__main__":
                     process_file(id, file)
                 mark_as_processed(id)
 
-            # TODO(rob): aggregate and insert
-            
+            # aggregate with new interaction data and insert into table for portal
+            agg_interactions()
+
         else:
             print('nothing to process', time.strftime("%H:%M:%S", time.localtime()))
             # rinse & repeat
