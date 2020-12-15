@@ -106,7 +106,6 @@ def agg_interactions():
         ORDER BY capture_id, c.start, session_id, client_id, source_id, target_id, it.type;
         """
         result = conn.execute(query)
-        print("agg result" + str(result))
         return
         
 if __name__ == "__main__":
