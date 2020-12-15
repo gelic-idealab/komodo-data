@@ -1,0 +1,15 @@
+version: '3'
+services:
+
+  data:
+    build: .
+    container_name: komodo-data
+    volumes: 
+      - ../captures:/komodo/captures
+    restart: always
+    networks:
+      - komodo_internal
+
+networks:
+  komodo_internal:
+    external: true

@@ -36,7 +36,7 @@ def check_for_unprocessed_captures():
     with engine.connect() as conn:
         query = """
                 SELECT capture_id
-                from komodo.capture
+                FROM captures
                 """
 
         result = conn.execute(query)
@@ -53,21 +53,20 @@ def process_file(id, file):
     print("processing file:", file)
     try:
         with open(file, 'rb') as f:
-            
             if file.endswith('.int'):
                 npdata = np.fromfile(f, dtype=np.int32)
                 df = pd.DataFrame(npdata.reshape(-1,7))
                 df.columns = INTERACTION_TABLE_COLUMNS
                 df['capture_id'] = id
                 with engine.connect() as conn:
-                    df.to_sql('interaction', conn, if_exists='append', index=False)
+                    df.to_sql('interactions', conn, if_exists='append', index=False)
 
             if file.endswith('.pos'):
                 npdata = np.fromfile(f, dtype=np.float32)
                 df = pd.DataFrame(npdata.reshape(-1,14))
                 df.columns = POSITION_TABLE_COLUMNS
                 with engine.connect() as conn:
-                    df.to_sql('position', conn, if_exists='append', index=False)
+                    df.to_sql('positions', conn, if_exists='append', index=False)
         
         print('Done.')
     except Exception as e:
@@ -79,7 +78,7 @@ def mark_as_processed(capture_id):
         session_id = int(capture_id.split('_')[0])
         start = int(capture_id.split('_')[1])
         processed = int(time.time())
-        query = f"INSERT INTO komodo.capture (capture_id, session_id, start, processed) VALUES('{capture_id}', {session_id}, {start}, {processed})"
+        query = f"INSERT INTO captures (capture_id, session_id, start, processed) VALUES('{capture_id}', {session_id}, {start}, {processed})"
 
         with engine.connect() as conn:
             result = conn.execute(query)
