@@ -8,9 +8,11 @@ from sqlalchemy import create_engine
 # import db configs
 from config import *
 
-CAPTURES_DIR='../komodo-relay/captures'
-CAPTURE_FILE_TYPES = ['int', 'pos']
+if len(CAPTURES_DIR) <= 0:
+    print("No captures directory declared in config.py. Exiting.")
+    sys.exit(1)
 
+CAPTURE_FILE_TYPES = ['int', 'pos']
 INTERACTION_TABLE_COLUMNS = ['seq', 'session_id', 'client_id', 'source_id', 'target_id', 'interaction_type', 'global_seq']
 POSITION_TABLE_COLUMNS = ['seq', 'session_id', 'client_id', 'entity_id', 'entity_type', 'scale', 'rotx', 'roty', 'rotz', 'rotw', 'posx', 'posy', 'posz', 'global_seq']
 
