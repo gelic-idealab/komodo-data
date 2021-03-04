@@ -8,7 +8,7 @@ from sqlalchemy import create_engine
 # import db configs
 from config import *
 
-CAPTURES_DIR='./captures'
+CAPTURES_DIR='../komodo-relay/captures'
 CAPTURE_FILE_TYPES = ['int', 'pos']
 
 INTERACTION_TABLE_COLUMNS = ['seq', 'session_id', 'client_id', 'source_id', 'target_id', 'interaction_type', 'global_seq']
@@ -29,31 +29,25 @@ except Exception as e:
     sys.exit(1)
 
 def check_for_unprocessed_captures():
-    # get ids of existing capture files
-    existing = list(set([f.split('.')[0] for f in os.listdir(CAPTURES_DIR)]))
-
-    # get ids of captures already processed
+    # get ids of unprocessed captures
     with engine.connect() as conn:
         query = """
                 SELECT capture_id
                 FROM captures
+                WHERE end IS NOT NULL AND processed IS NULL
+                ORDER BY capture_id
                 """
 
         result = conn.execute(query)
-        processed = list(set([r[0] for r in result]))
+        ready = list([r[0] for r in result])
 
-    unprocessed = []
-    for id in existing:
-        if id not in processed:
-            unprocessed.append(id)
-
-    return unprocessed
+    return ready
 
 def process_file(id, file):
-    print("processing file:", file)
+    print("Processing file:", file)
     try:
         with open(file, 'rb') as f:
-            if file.endswith('.int'):
+            if os.path.basename(file) == 'int':
                 npdata = np.fromfile(f, dtype=np.int32)
                 df = pd.DataFrame(npdata.reshape(-1,7))
                 df.columns = INTERACTION_TABLE_COLUMNS
@@ -61,24 +55,29 @@ def process_file(id, file):
                 with engine.connect() as conn:
                     df.to_sql('interactions', conn, if_exists='append', index=False)
 
-            if file.endswith('.pos'):
+            if os.path.basename(file) == 'pos':
                 npdata = np.fromfile(f, dtype=np.float32)
                 df = pd.DataFrame(npdata.reshape(-1,14))
                 df.columns = POSITION_TABLE_COLUMNS
                 with engine.connect() as conn:
                     df.to_sql('positions', conn, if_exists='append', index=False)
         
+        return True
+        
         print('Done.')
     except Exception as e:
         print(e)
+        return False
 
-def mark_as_processed(capture_id):
+def mark_as_processed(capture_id, success):
     try:
-        print("marking as processed:", capture_id)
-        session_id = int(capture_id.split('_')[0])
-        start = int(capture_id.split('_')[1])
-        processed = int(time.time())
-        query = f"INSERT INTO captures (capture_id, session_id, start, processed) VALUES('{capture_id}', {session_id}, {start}, {processed})"
+        print("Successfully processed", capture_id, success)
+        if success:
+            processed = int(time.time())
+        else:
+            processed = 0
+        
+        query = f"UPDATE captures SET processed = {processed} WHERE capture_id = '{capture_id}'"
 
         with engine.connect() as conn:
             result = conn.execute(query)
@@ -109,22 +108,26 @@ def agg_interactions():
         return
         
 if __name__ == "__main__":
+
     # infinite poll & process
     while True:
-        unprocessed = check_for_unprocessed_captures() # ids are like 1_1595630966721
-        if len(unprocessed) > 0:
-            print('captures to process:', unprocessed)
-            for id in unprocessed:
-                for t in CAPTURE_FILE_TYPES:
-                    file = os.path.join(CAPTURES_DIR, '.'.join([id, t]))
-                    process_file(id, file)
-                mark_as_processed(id)
+        ready = check_for_unprocessed_captures()
+        if len(ready) > 0:
+            print("Ready to process:", ready)
+            for id in ready:
+                success = True
+                session = id.split("_")[0]
+                capture = id.split("_")[1]
+                for filetype in CAPTURE_FILE_TYPES:
+                    file = os.path.join(CAPTURES_DIR, session, capture, filetype)
+                    success = success and process_file(id, file)
+                mark_as_processed(id, success)
 
             # aggregate with new interaction data and insert into table for portal
             agg_interactions()
 
         else:
-            print('nothing to process', time.strftime("%H:%M:%S", time.localtime()))
+            print('Nothing to process', time.strftime("%H:%M:%S", time.localtime()))
             # rinse & repeat
             time.sleep(10)
 
