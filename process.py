@@ -3,7 +3,7 @@ import sys
 import time
 import pandas as pd
 import numpy as np
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 
 # import db configs
 from config import *
@@ -79,10 +79,10 @@ def mark_as_processed(capture_id, success):
         else:
             processed = 0
         
-        query = f"UPDATE captures SET processed = {processed} WHERE capture_id = '{capture_id}'"
+        query = text("UPDATE captures SET processed = :p WHERE capture_id = :ci")
 
         with engine.connect() as conn:
-            result = conn.execute(query)
+            result = conn.execute(query, {'p': processed, 'ci': capture_id})
 
     except Exception as e:
         print(e)
