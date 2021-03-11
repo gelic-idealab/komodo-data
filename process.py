@@ -37,7 +37,7 @@ def check_for_unprocessed_captures():
                 SELECT capture_id
                 FROM captures
                 WHERE end IS NOT NULL AND processed IS NULL
-                ORDER BY capture_id
+                ORDER BY start
                 """
 
         result = conn.execute(query)
@@ -126,7 +126,7 @@ if __name__ == "__main__":
                 mark_as_processed(id, success)
 
             # aggregate with new interaction data and insert into table for portal
-            agg_interactions()
+            # agg_interactions()
 
         else:
             print('Nothing to process', time.strftime("%H:%M:%S", time.localtime()))
