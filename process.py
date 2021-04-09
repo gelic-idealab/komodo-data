@@ -87,25 +87,6 @@ def mark_as_processed(capture_id, success):
     except Exception as e:
         print(e)
 
-def agg_interactions():
-    with engine.connect() as conn:
-        query = """
-        INSERT INTO KP_Interactions
-        SELECT
-            i.capture_id,
-            c.start as capture_start,
-            i.session_id,
-            client_id,
-            source_id,
-            target_id, 
-            count(*) as count
-        FROM komodo.interactions i
-        JOIN komodo.captures c ON i.capture_id = c.capture_id
-        GROUP BY capture_id, c.start, session_id, client_id, source_id, target_id
-        ORDER BY capture_id, c.start, session_id, client_id, source_id, target_id;
-        """
-        result = conn.execute(query)
-        return
         
 if __name__ == "__main__":
 
@@ -122,9 +103,6 @@ if __name__ == "__main__":
                     file = os.path.join(CAPTURES_DIR, session, capture, filetype)
                     success = success and process_file(id, file)
                 mark_as_processed(id, success)
-
-            # aggregate with new interaction data and insert into table for portal
-            # agg_interactions()
 
         else:
             print('Nothing to process', time.strftime("%H:%M:%S", time.localtime()))
