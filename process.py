@@ -98,13 +98,11 @@ def agg_interactions():
             client_id,
             source_id,
             target_id, 
-            it.type,
             count(*) as count
         FROM komodo.interactions i
-        JOIN komodo.interaction_types it ON i.interaction_type = it.id
         JOIN komodo.captures c ON i.capture_id = c.capture_id
-        GROUP BY capture_id, c.start, session_id, client_id, source_id, target_id, it.type
-        ORDER BY capture_id, c.start, session_id, client_id, source_id, target_id, it.type;
+        GROUP BY capture_id, c.start, session_id, client_id, source_id, target_id
+        ORDER BY capture_id, c.start, session_id, client_id, source_id, target_id;
         """
         result = conn.execute(query)
         return
