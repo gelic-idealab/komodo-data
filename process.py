@@ -61,6 +61,7 @@ def process_file(id, file):
                 npdata = np.fromfile(f, dtype=np.float32)
                 df = pd.DataFrame(npdata.reshape(-1,14))
                 df.columns = POSITION_TABLE_COLUMNS
+                df['capture_id'] = id
                 with engine.connect() as conn:
                     df.to_sql('positions', conn, if_exists='append', index=False)
         
