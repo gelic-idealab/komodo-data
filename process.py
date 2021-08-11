@@ -49,9 +49,17 @@ def process_file(id, file):
     try:
         with open(file, 'r') as f:
             json_data = json.load(f)
-            print(json_data)
             
-            # TODO(rob): extract message metadata for insert query. 
+            # extract message metadata for insert query.
+            for record in json_data:
+                seq = record['seq']
+                message = record['message']
+                session_id = message['session_id']
+                client_id = message['client_id']
+                type = message['message']['type']
+                data = json.loads(message['message']['data'])
+                print(f"data: {data}")
+              
             # insert message data into database
             # with engine.connect() as conn:
             #     df.to_sql('interactions', conn, if_exists='append', index=False)
@@ -65,7 +73,7 @@ def process_file(id, file):
 def mark_as_processed(capture_id, success):
     try:
         if success:
-            print("Successfully processed", capture_id, success)
+            print("Successfully processed", capture_id)
             processed = int(time.time())
         else:
             print("Failed to process capture:", capture_id)
