@@ -52,13 +52,15 @@ def process_file(id, file):
             
             # extract message metadata for insert query.
             for record in json_data:
+                capture_id = id
                 seq = record['seq']
                 message = record['message']
                 session_id = message['session_id']
                 client_id = message['client_id']
                 type = message['message']['type']
+                ts = message['ts']
                 data = json.loads(message['message']['data'])
-                print(f"data: {data}")
+                print(f"message record: {record}")
               
             # insert message data into database
             # with engine.connect() as conn:
