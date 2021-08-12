@@ -4,7 +4,7 @@ import time
 import json
 import pandas as pd
 import numpy as np
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, text, types
 
 # import db configs
 from config import *
@@ -47,24 +47,9 @@ def check_for_unprocessed_captures():
 def process_file(id, file):
     print("Processing file:", file)
     try:
-        with open(file, 'r') as f:
-            json_data = json.load(f)
-            
-            # extract message metadata for insert query.
-            for record in json_data:
-                capture_id = id
-                seq = record['seq']
-                message = record['message']
-                session_id = message['session_id']
-                client_id = message['client_id']
-                type = message['message']['type']
-                ts = message['ts']
-                data = json.loads(message['message']['data'])
-                print(f"message record: {record}")
-              
-            # insert message data into database
-            # with engine.connect() as conn:
-            #     df.to_sql('interactions', conn, if_exists='append', index=False)
+        df = pd.read_json(file)
+        with engine.connect() as conn:
+            df.to_sql('data', conn, if_exists='append', index=False, dtype={'message': types.JSON})
         print('Done.')        
         return True
         
