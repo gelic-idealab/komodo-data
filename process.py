@@ -47,14 +47,17 @@ def check_for_unprocessed_captures():
 def process_file(id, file):
     print("Processing file:", file)
     try:
-        df = pd.read_json(file)
+        # TODO(rob): check if file exists. 
+        df = pd.read_json(file, dtype={'capture_id': types.String}) 
+        # explicitly set capture_id data type because the "_" character is valid syntax for python ints, and will read it as such and omit the "_". 
+        
         with engine.connect() as conn:
-            df.to_sql('data', conn, if_exists='append', index=False, dtype={'message': types.JSON})
+            df.to_sql('data', conn, if_exists='append', index=False, dtype={'message': types.JSON}) # explicitly set the message data type, otherwise the insert will fail. 
         print('Done.')        
         return True
         
     except Exception as e:
-        print(e)
+        print(f"Error processing file: {file}: {e}")
         return False
 
 def mark_as_processed(capture_id, success):
