@@ -1,20 +1,19 @@
 import os
 import sys
 import time
+import json
 import pandas as pd
 import numpy as np
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, text, types
 
 # import db configs
 from config import *
 
+CAPTURE_FILE_NAME = 'data'
+
 if len(CAPTURES_DIR) <= 0:
     print("No captures directory declared in config.py. Exiting.")
     sys.exit(1)
-
-CAPTURE_FILE_TYPES = ['int', 'pos']
-INTERACTION_TABLE_COLUMNS = ['seq', 'session_id', 'client_id', 'source_id', 'target_id', 'interaction_type', 'global_seq']
-POSITION_TABLE_COLUMNS = ['seq', 'session_id', 'client_id', 'entity_id', 'entity_type', 'scale', 'rotx', 'roty', 'rotz', 'rotw', 'posx', 'posy', 'posz', 'global_seq']
 
 if not os.path.exists(CAPTURES_DIR):
     os.mkdir(CAPTURES_DIR)
@@ -48,40 +47,29 @@ def check_for_unprocessed_captures():
 def process_file(id, file):
     print("Processing file:", file)
     try:
-        with open(file, 'rb') as f:
-            if os.path.basename(file) == 'int':
-                npdata = np.fromfile(f, dtype=np.int32)
-                df = pd.DataFrame(npdata.reshape(-1,7))
-                df.columns = INTERACTION_TABLE_COLUMNS
-                df['capture_id'] = id
-                with engine.connect() as conn:
-                    df.to_sql('interactions', conn, if_exists='append', index=False)
-
-            if os.path.basename(file) == 'pos':
-                npdata = np.fromfile(f, dtype=np.float32)
-                df = pd.DataFrame(npdata.reshape(-1,14))
-                df.columns = POSITION_TABLE_COLUMNS
-                df['capture_id'] = id
-                with engine.connect() as conn:
-                    df.to_sql('positions', conn, if_exists='append', index=False)
+        # TODO(rob): check if file exists. 
+        df = pd.read_json(file, dtype={'capture_id': types.String}) 
+        # explicitly set capture_id data type because the "_" character is valid syntax for python ints, and will read it as such and omit the "_". 
         
+        with engine.connect() as conn:
+            df.to_sql('data', conn, if_exists='append', index=False, dtype={'message': types.JSON}) # explicitly set the message data type, otherwise the insert will fail. 
+        print('Done.')        
         return True
         
-        print('Done.')
     except Exception as e:
-        print(e)
+        print(f"Error processing file: {file}: {e}")
         return False
 
 def mark_as_processed(capture_id, success):
     try:
-        print("Successfully processed", capture_id, success)
         if success:
+            print("Successfully processed", capture_id)
             processed = int(time.time())
         else:
+            print("Failed to process capture:", capture_id)
             processed = 0
         
         query = text("UPDATE captures SET processed = :p WHERE capture_id = :ci")
-
         with engine.connect() as conn:
             result = conn.execute(query, {'p': processed, 'ci': capture_id})
 
@@ -97,12 +85,10 @@ if __name__ == "__main__":
         if len(ready) > 0:
             print("Ready to process:", ready)
             for id in ready:
-                success = True
                 session = id.split("_")[0]
                 capture = id.split("_")[1]
-                for filetype in CAPTURE_FILE_TYPES:
-                    file = os.path.join(CAPTURES_DIR, session, capture, filetype)
-                    success = success and process_file(id, file)
+                file = os.path.join(CAPTURES_DIR, session, capture, CAPTURE_FILE_NAME)
+                success = process_file(id, file)
                 mark_as_processed(id, success)
 
         else:
