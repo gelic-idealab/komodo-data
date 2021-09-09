@@ -44,6 +44,49 @@ def check_for_unprocessed_captures():
 
     return ready
 
+def aggregate_interaction_type(session_id, interaction_type):
+    # aggregate by interaction types 
+    with engine.connect() as conn:
+        query = text("""
+        SELECT count(*) 
+        FROM data
+        WHERE message->'$.interactionType' = :interaction_type and session_id = :session_id;
+        """
+        )
+
+        result = conn.execute(query,{"session_id":session_id, "interaction_type":interaction_type})
+        count = [r[0] for r in result]
+        
+        # uncomment this to test the output 
+        # print(query)
+        # print(count)
+        # sys.exit() 
+        
+
+    return count
+
+
+def aggregate_user(session_id,client_id):
+    # aggregate by users
+    with engine.connect() as conn:
+        query = text("""
+        SELECT count(*) 
+        FROM data
+        WHERE message->'$.clientId' = :client_id and session_id = :session_id;
+        """
+        )
+
+        result = conn.execute(query,{"session_id":session_id, "client_id":client_id})
+        count = [r[0] for r in result]
+
+       # uncomment this to test the output 
+        # print(query)
+        # print(count)
+        # sys.exit() 
+
+    return count
+
+
 def process_file(id, file):
     print("Processing file:", file)
     try:
@@ -81,6 +124,8 @@ if __name__ == "__main__":
 
     # infinite poll & process
     while True:
+        aggregate_user(126,5) 
+        aggregate_interaction_type(126, 4) 
         ready = check_for_unprocessed_captures()
         if len(ready) > 0:
             print("Ready to process:", ready)

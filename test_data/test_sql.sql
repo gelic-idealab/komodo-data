@@ -7,3 +7,4 @@ UPDATE komodo.captures SET processed = NULL WHERE capture_id = '126_163044351389
 
 -- querying the message JSON field 
 SELECT * from komodo.data where message->'$.entityType' = 0 ORDER BY id DESC;
+
