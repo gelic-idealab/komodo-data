@@ -1,4 +1,5 @@
 import os
+import os.path
 import sys
 import time
 import json
@@ -58,8 +59,8 @@ def aggregate_interaction_type(session_id, interaction_type):
         count = [r[0] for r in result]
         
         # uncomment this to test the output 
-        # print(query)
-        # print(count)
+        print(query)
+        print(count)
         # sys.exit() 
         
 
@@ -80,8 +81,8 @@ def aggregate_user(session_id,client_id):
         count = [r[0] for r in result]
 
        # uncomment this to test the output 
-        # print(query)
-        # print(count)
+        print(query)
+        print(count)
         # sys.exit() 
 
     return count
@@ -90,7 +91,9 @@ def aggregate_user(session_id,client_id):
 def process_file(id, file):
     print("Processing file:", file)
     try:
-        # TODO(rob): check if file exists. 
+        if (not os.path.isfile(file)):
+            print(f"Error processing file: {file}: file does not exist")
+            return False
         df = pd.read_json(file, dtype={'capture_id': types.String}) 
         # explicitly set capture_id data type because the "_" character is valid syntax for python ints, and will read it as such and omit the "_". 
         
