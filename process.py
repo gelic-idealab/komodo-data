@@ -1,4 +1,5 @@
 import os
+import os.path
 import sys
 import time
 import json
@@ -79,6 +80,7 @@ def aggregate_interaction_type(session_id, interaction_type):
     except:
         return False
         
+<<<<<<< HEAD
     # uncomment this to test the output 
     # query = text("""
     # SELECT * 
@@ -90,6 +92,12 @@ def aggregate_interaction_type(session_id, interaction_type):
     # sum = np.sum(count)
     # print(sum == 13)
     # sys.exit() 
+=======
+        # uncomment this to test the output 
+        print(query)
+        print(count)
+        # sys.exit() 
+>>>>>>> 9d3c218a088effef504957bba7970c08eac08d95
         
     return True
 
@@ -128,6 +136,7 @@ def aggregate_user(session_id,client_id):
     except:
         return False
 
+<<<<<<< HEAD
     # uncomment this to test the output 
     # query = text("""
     # SELECT * 
@@ -139,6 +148,12 @@ def aggregate_user(session_id,client_id):
     # sum = np.sum(count)
     # print(sum == 50510)
     # sys.exit() 
+=======
+       # uncomment this to test the output 
+        print(query)
+        print(count)
+        # sys.exit() 
+>>>>>>> 9d3c218a088effef504957bba7970c08eac08d95
 
     return True
 
@@ -146,7 +161,9 @@ def aggregate_user(session_id,client_id):
 def process_file(id, file):
     print("Processing file:", file)
     try:
-        # TODO(rob): check if file exists. 
+        if (not os.path.isfile(file)):
+            print(f"Error processing file: {file}: file does not exist")
+            return False
         df = pd.read_json(file, dtype={'capture_id': types.String}) 
         # explicitly set capture_id data type because the "_" character is valid syntax for python ints, and will read it as such and omit the "_". 
         
