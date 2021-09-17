@@ -27,6 +27,7 @@ try:
     # TODO(rob): use config file https://docs.sqlalchemy.org/en/13/core/engines.html#sqlalchemy.engine_from_config
     connection_string = f'mysql+pymysql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
     engine = create_engine(connection_string)
+    
 
 except Exception as e:
     print(e)
@@ -79,25 +80,7 @@ def aggregate_interaction_type(session_id, interaction_type):
             conn.execute(query,{"session_id":session_id, "interaction_type":interaction_type})
     except:
         return False
-        
-<<<<<<< HEAD
-    # uncomment this to test the output 
-    # query = text("""
-    # SELECT * 
-    # FROM aggregate_interaction;
-    # """
-    # )
-    # result = conn.execute(query)
-    # count = [r[1] for r in result]
-    # sum = np.sum(count)
-    # print(sum == 13)
-    # sys.exit() 
-=======
-        # uncomment this to test the output 
-        print(query)
-        print(count)
-        # sys.exit() 
->>>>>>> 9d3c218a088effef504957bba7970c08eac08d95
+
         
     return True
 
@@ -126,7 +109,7 @@ def aggregate_user(session_id,client_id):
             INSERT INTO aggregate_user 
             SELECT message->'$.entityType' as entity_type, count(*) as count
             FROM data
-            WHERE message->'$.clientId' = :client_id and session_id = :session_id and message->'$.entityType' is not null
+            WHERE message->'$.clientId' = :client_id and session_id = :session_id and `type` = 'sync'
             group by entity_type;
 
             """
@@ -135,25 +118,6 @@ def aggregate_user(session_id,client_id):
             conn.execute(query,{"session_id":session_id, "client_id":client_id})
     except:
         return False
-
-<<<<<<< HEAD
-    # uncomment this to test the output 
-    # query = text("""
-    # SELECT * 
-    # FROM aggregate_user;
-    # """
-    # )
-    # result = conn.execute(query)
-    # count = [r[1:] for r in result]
-    # sum = np.sum(count)
-    # print(sum == 50510)
-    # sys.exit() 
-=======
-       # uncomment this to test the output 
-        print(query)
-        print(count)
-        # sys.exit() 
->>>>>>> 9d3c218a088effef504957bba7970c08eac08d95
 
     return True
 
@@ -197,19 +161,6 @@ if __name__ == "__main__":
 
     # infinite poll & process
     while True:
-        # will be moving to unit test files
-        # user_flag = aggregate_user(126,5) 
-        # if user_flag:
-        #     print("User aggregation succeeded!")
-        # else:
-        #     print("User aggregation failed!")
-
-        # interaction_flag = aggregate_interaction_type(126, 1) 
-        # if interaction_flag:
-        #     print("Interaction aggregation succeeded!")
-        # else:
-        #     print("Interaction aggregation failed!")
-
         ready = check_for_unprocessed_captures()
         if len(ready) > 0:
             print("Ready to process:", ready)
