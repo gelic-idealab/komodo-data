@@ -129,6 +129,31 @@ def aggregate_user(session_id,client_id):
     return True
 
 
+def user_energy(session_id,client_id, entity_type):
+    try:
+        with engine.connect() as conn:
+            query = text("""
+            select energy
+            from 
+	            (select client_id, message->'$.entityType' as entity_type,
+			            message->'$.pos' as position, 
+			            SQRT(POWER( message->'$.pos.x' - LAG(message->'$.pos.x',1) OVER (order by seq),2)+
+			            POWER( message->'$.pos.y' - LAG(message->'$.pos.y',1) OVER (order by seq),2)+
+			            POWER( message->'$.pos.z' - LAG(message->'$.pos.z',1) OVER (order by seq),2))/(ts - LAG(ts,1) OVER (order by seq)) as energy,
+			            ts as timestamp, seq
+	            from data
+	            where message->'$.clientId' = :client_id and session_id = :session_id and `type` = 'sync' and message->'$.entityType' = :entity_type
+	            order by seq) as user_energy;
+
+            """
+            )
+
+            result = conn.execute(query,{"session_id":session_id, "client_id":client_id, "entity_type":entity_type})
+    except:
+        return False
+
+    return True
+
 def process_file(id, file):
     print("Processing file:", file)
     try:
@@ -165,7 +190,7 @@ def mark_as_processed(capture_id, success):
 
         
 if __name__ == "__main__":
-
+    
     # infinite poll & process
     while True:
         ready = check_for_unprocessed_captures()
