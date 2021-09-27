@@ -143,7 +143,8 @@ def user_energy(session_id,client_id, entity_type):
 			            ts as timestamp, seq
 	            from data
 	            where message->'$.clientId' = :client_id and session_id = :session_id and `type` = 'sync' and message->'$.entityType' = :entity_type
-	            order by seq) as user_energy;
+	            order by seq) as user_energy
+                where energy is not null;
 
             """
             )
@@ -190,7 +191,7 @@ def mark_as_processed(capture_id, success):
 
         
 if __name__ == "__main__":
-    
+
     # infinite poll & process
     while True:
         ready = check_for_unprocessed_captures()
