@@ -116,6 +116,7 @@ def aggregate_user(session_id,client_id):
             )
 
             conn.execute(query,{"session_id":session_id, "client_id":client_id})
+
             query = text("""
             UPDATE komodo.aggregate_user
             SET entity_type = replace(replace(replace(replace(entity_type, 0, 'head'), 1, 'left_hand'), 2, 'right_hand'), 3 ,'spawned_entity');
@@ -133,7 +134,6 @@ def user_energy(session_id,client_id, entity_type):
     try:
         with engine.connect() as conn:
             query = text("""
-            # Energy calculation for head  
         select session_id, entity_type, timestamp, energy,       
 		        row_number() over (partition by entity_type order by energy desc) as energy_rank 
         from 
@@ -144,7 +144,7 @@ def user_energy(session_id,client_id, entity_type):
 			        POWER( message->'$.pos.z' - LAG(message->'$.pos.z',1) OVER (order by seq),2))/(ts - LAG(ts,1) OVER (order by seq)) as energy,
 			        ts as timestamp, seq
 	        from data
-	        where message->'$.clientId' = 5 and session_id = 126 and `type` = 'sync' 
+	        where message->'$.clientId' = :client_id and session_id = :session_id and `type` = 'sync' 
 	        order by seq) as user_energy
         where energy is not null
         order by energy_rank, entity_type, energy DESC;
