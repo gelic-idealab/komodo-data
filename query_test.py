@@ -1,14 +1,13 @@
 ##File query_test.py
-import unittest
+import unittest 
+from unittest import TestCase
 import numpy as np
-from unittest.case import TestCase
+from numpy.testing._private.utils import assert_equal
 import process 
-from sqlalchemy import create_engine, text, types
+from sqlalchemy import create_engine, text
 import os
 import os.path
 import sys
-import time
-import json
 from numpy.core.defchararray import count
 import pandas as pd
 
@@ -37,25 +36,31 @@ class TestQuery(unittest.TestCase):
             print(e)
             sys.exit(1)
         
-        with engine.connect() as conn:
-            query = text("""
-            SELECT * 
-            FROM aggregate_interaction;
-            """
-            )
-            result = conn.execute(query)
-            count = [r[1] for r in result]
-            sum = np.sum(count)
+        interaction_flag = process.aggregate_interaction_type(126, 1) 
 
         with engine.connect() as conn:
-            query = text("""
-            SELECT * 
-            FROM aggregate_user;
-            """
-            )
-            result = conn.execute(query)
-            count = [r[1:] for r in result]
-            sum2 = np.sum(count)
+            with conn.begin(): 
+                query = text("""
+                SELECT * 
+                FROM aggregate_interaction;
+                """
+                )
+                result = conn.execute(query)
+                count = [r[1] for r in result]
+                sum = np.sum(count)
+
+        user_flag = process.aggregate_user(126,5) 
+
+        with engine.connect() as conn:
+            with conn.begin(): 
+                query = text("""
+                SELECT * 
+                FROM aggregate_user;
+                """
+                )
+                result = conn.execute(query)
+                count = [r[1:] for r in result]
+                sum2 = np.sum(count)
         
         with engine.connect() as conn:
             query = text("""
@@ -79,20 +84,21 @@ class TestQuery(unittest.TestCase):
 
             result = conn.execute(query)
             count = [r[0:] for r in result]
-            df = pd.DataFrame (count, columns = ['session_id','timestamp','entity_type','energy','energy_rank'])
+            df = pd.DataFrame(count, columns = ['session_id','timestamp','entity_type','energy','energy_rank'])
             print(df.head(15))
 
-        
-        user_flag = process.aggregate_user(126,5) 
-        if user_flag and (sum2 == 33594):
-            print("User aggregation succeeded!")
-        else:
-            print("User aggregation failed!")
+        self.assertEqual(sum2, 33594)
+        self.assertEqual(sum, 2238)
 
-        interaction_flag = process.aggregate_interaction_type(126, 1) 
-        if interaction_flag and (sum == 2238):
-            print("Interaction aggregation succeeded!")
-        else:
-            print("Interaction aggregation failed!")
+
+        # if user_flag and (sum2 == 33594):
+        #     print("User aggregation succeeded!")
+        # else:
+        #     print("User aggregation failed!")
+
+        # if interaction_flag and (sum == 2238):
+        #     print("Interaction aggregation succeeded!")
+        # else:
+        #     print("Interaction aggregation failed!")
         
         

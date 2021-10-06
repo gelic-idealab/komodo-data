@@ -52,32 +52,35 @@ def aggregate_interaction_type(session_id, interaction_type):
     try: 
         # aggregate by interaction types 
         with engine.connect() as conn:
-            query = text("""
-            DROP TABLE IF EXISTS `komodo`.`aggregate_interaction`;
-            """
-            )
+            with conn.begin(): 
+                query = text("""
+                DROP TABLE IF EXISTS `komodo`.`aggregate_interaction`;
+                """
+                )
 
-            conn.execute(query)
-            
-            query = text("""
-            CREATE TABLE `komodo`.`aggregate_interaction` (client_id int not null,
-            primary key (client_id),
-            interaction_count int not null);
-            """
-            )
+                conn.execute(query)
 
-            conn.execute(query)
+            with conn.begin(): 
+                query = text("""
+                CREATE TABLE `komodo`.`aggregate_interaction` (client_id int not null,
+                primary key (client_id),
+                interaction_count int not null);
+                """
+                )
 
-            query = text("""
-            INSERT INTO aggregate_interaction 
-            SELECT client_id, count(message) as interaction_count
-            FROM data
-            WHERE message->'$.interactionType' = :interaction_type and session_id= :session_id
-            group by client_id;
-            """
-            )
+                conn.execute(query)
+                
+            with conn.begin(): 
+                query = text("""
+                INSERT INTO aggregate_interaction 
+                SELECT client_id, count(message) as interaction_count
+                FROM data
+                WHERE message->'$.interactionType' = :interaction_type and session_id= :session_id
+                group by client_id;
+                """
+                )
 
-            conn.execute(query,{"session_id":session_id, "interaction_type":interaction_type})
+                conn.execute(query,{"session_id":session_id, "interaction_type":interaction_type})
     except:
         return False
 
@@ -87,43 +90,50 @@ def aggregate_interaction_type(session_id, interaction_type):
 def aggregate_user(session_id,client_id):
     # aggregate by users
     try:
-        with engine.connect() as conn:
-            query = text("""
-            DROP TABLE IF EXISTS `komodo`.`aggregate_user`;
-            """
-            )
+        with engine.connect()as conn:
+            with conn.begin(): 
+                query = text("""
+                DROP TABLE IF EXISTS `komodo`.`aggregate_user`;
+                """
+                )
 
-            conn.execute(query)
-            query = text("""
-            CREATE TABLE if not exists aggregate_user 
-            (
-            entity_type varchar(20) not null,
-            primary key (entity_type),
-            user_count int not null
-            );
-            """
-            )
+                conn.execute(query)
+        
+            with conn.begin(): 
+                query = text("""
+                CREATE TABLE if not exists aggregate_user 
+                (
+                entity_type varchar(20) not null,
+                primary key (entity_type),
+                user_count int not null
+                );
+                """
+                )
 
-            conn.execute(query)
-            query = text("""
-            INSERT INTO aggregate_user 
-            SELECT message->'$.entityType' as entity_type, count(*) as count
-            FROM data
-            WHERE message->'$.clientId' = :client_id and session_id = :session_id and `type` = 'sync'
-            group by entity_type;
+                conn.execute(query)
 
-            """
-            )
+            with conn.begin(): 
+                query = text("""
+                INSERT INTO aggregate_user 
+                SELECT message->'$.entityType' as entity_type, count(*) as count
+                FROM data
+                WHERE message->'$.clientId' = :client_id and session_id = :session_id and `type` = 'sync'
+                group by entity_type;
 
-            conn.execute(query,{"session_id":session_id, "client_id":client_id})
+                """
+                )
 
-            query = text("""
-            UPDATE komodo.aggregate_user
-            SET entity_type = replace(replace(replace(replace(entity_type, 0, 'head'), 1, 'left_hand'), 2, 'right_hand'), 3 ,'spawned_entity');
-            """
-            )
+                conn.execute(query,{"session_id":session_id, "client_id":client_id})
 
-            conn.execute(query)
+            with conn.begin(): 
+                query = text("""
+                UPDATE komodo.aggregate_user
+                SET entity_type = replace(replace(replace(replace(entity_type, 0, 'head'), 1, 'left_hand'), 2, 'right_hand'), 3 ,'spawned_entity');
+                """
+                )
+
+                conn.execute(query)
+
     except:
         return False
 
@@ -154,7 +164,7 @@ def user_energy(session_id,client_id, entity_type):
 
             result = conn.execute(query,{"session_id":session_id, "client_id":client_id, "entity_type":entity_type})
     except:
-        return False
+        return False # TODO:specify error messages 
 
     return True
 
