@@ -69,7 +69,7 @@ def aggregate_interaction_type(session_id, interaction_type):
                 )
 
                 conn.execute(query)
-                
+
             with conn.begin(): 
                 query = text("""
                 INSERT INTO aggregate_interaction 
@@ -81,8 +81,8 @@ def aggregate_interaction_type(session_id, interaction_type):
                 )
 
                 conn.execute(query,{"session_id":session_id, "interaction_type":interaction_type})
-    except:
-        return False
+    except ValueError:
+        return "Argument(s) missing for aggregate_interaction_type."
 
         
     return True
@@ -134,8 +134,8 @@ def aggregate_user(session_id,client_id):
 
                 conn.execute(query)
 
-    except:
-        return False
+    except ValueError:
+        return "Argument(s) missing for aggregate_user."
 
     return True
 
@@ -163,8 +163,8 @@ def user_energy(session_id,client_id, entity_type):
             )
 
             result = conn.execute(query,{"session_id":session_id, "client_id":client_id, "entity_type":entity_type})
-    except:
-        return False # TODO:specify error messages 
+    except ValueError:
+        return "Argument(s) missing for user_energy."
 
     return True
 

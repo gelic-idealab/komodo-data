@@ -90,15 +90,3 @@ class TestQuery(unittest.TestCase):
         self.assertEqual(sum2, 33594)
         self.assertEqual(sum, 2238)
 
-
-        # if user_flag and (sum2 == 33594):
-        #     print("User aggregation succeeded!")
-        # else:
-        #     print("User aggregation failed!")
-
-        # if interaction_flag and (sum == 2238):
-        #     print("Interaction aggregation succeeded!")
-        # else:
-        #     print("Interaction aggregation failed!")
-        
-        
