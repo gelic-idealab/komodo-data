@@ -85,6 +85,7 @@ class TestQuery(unittest.TestCase):
             result = conn.execute(query)
             count = [r[0:] for r in result]
             df = pd.DataFrame(count, columns = ['session_id','timestamp','entity_type','energy','energy_rank'])
+            df.to_csv('energy_out.csv',index=False)
             print(df.head(15))
 
         self.assertEqual(sum2, 33594)
