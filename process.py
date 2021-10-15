@@ -54,7 +54,7 @@ def aggregate_interaction_type(session_id, interaction_type):
         with engine.connect() as conn:
             with conn.begin(): 
                 query = text("""
-                DROP TABLE IF EXISTS `komodo`.`aggregate_interaction`;
+                DROP TABLE IF EXISTS `aggregate_interaction`;
                 """
                 )
 
@@ -62,7 +62,9 @@ def aggregate_interaction_type(session_id, interaction_type):
 
             with conn.begin(): 
                 query = text("""
-                CREATE TABLE `komodo`.`aggregate_interaction` (client_id int not null,
+                CREATE TABLE aggregate_interaction 
+                (
+                client_id int not null,
                 primary key (client_id),
                 interaction_count int not null);
                 """
@@ -95,7 +97,7 @@ def aggregate_user(session_id,client_id):
         with engine.connect()as conn:
             with conn.begin(): 
                 query = text("""
-                DROP TABLE IF EXISTS `komodo`.`aggregate_user`;
+                DROP TABLE IF EXISTS `aggregate_user`;
                 """
                 )
 
