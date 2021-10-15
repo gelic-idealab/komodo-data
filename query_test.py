@@ -86,8 +86,18 @@ class TestQuery(unittest.TestCase):
             count = [r[0:] for r in result]
             df = pd.DataFrame(count, columns = ['session_id','timestamp','entity_type','energy','energy_rank'])
             df.to_csv('energy_out.csv',index=False)
-            print(df.head(15))
+            out_list = df.head(5).values.tolist()
 
-        self.assertEqual(sum2, 33594)
-        self.assertEqual(sum, 2238)
+            test = [[126,'0',1630443609231,0.536178417303133,1],
+                    [126,'1',1630443588867,0.9551319817369843,1],
+                    [126,'2',1630443590718,1.4284266059504278,1],
+                    [126,'3',1630443696530,0.13668642437699915,1],
+                    [126,'0',1630443614316,0.47170262033491217,2]]
+
+        # aggregate_interaction
+        self.assertEqual(sum, 3357)
+        # aggregate_user
+        self.assertEqual(sum2, 50391)
+        # user_energy
+        self.assertEqual(out_list, test)
 
