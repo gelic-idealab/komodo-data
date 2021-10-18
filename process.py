@@ -62,7 +62,7 @@ def aggregate_interaction_type(session_id, interaction_type):
 
             with conn.begin(): 
                 query = text("""
-                CREATE TABLE aggregate_interaction 
+                CREATE TABLE `aggregate_interaction` 
                 (
                 client_id int not null,
                 primary key (client_id),
@@ -105,7 +105,7 @@ def aggregate_user(session_id,client_id):
         
             with conn.begin(): 
                 query = text("""
-                CREATE TABLE if not exists aggregate_user 
+                CREATE TABLE if not exists `aggregate_user`
                 (
                 entity_type varchar(20) not null,
                 primary key (entity_type),
