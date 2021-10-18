@@ -64,19 +64,10 @@ class TestQuery(unittest.TestCase):
         
         with engine.connect() as conn:
             with conn.begin(): 
-                query1 = text("""
-                use komodo;
-                """
-                )
-
-                conn.execute(query1)
-
-            with conn.begin(): 
                 query = text("""
-                select session_id, entity_type, timestamp, energy,       
+                select session_id, entity_type, timestamp, energy,
                         row_number() over (partition by entity_type order by energy desc) as energy_rank 
-                from 
-                (   select session_id, client_id, message->'$.entityType' as entity_type,
+                from (select session_id, client_id, message->'$.entityType' as entity_type,
                         message->'$.pos' as position, 
                         SQRT(POWER( message->'$.pos.x' - LAG(message->'$.pos.x',1) OVER (order by seq),2)+
                         POWER( message->'$.pos.y' - LAG(message->'$.pos.y',1) OVER (order by seq),2)+
