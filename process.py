@@ -151,20 +151,19 @@ def user_energy(session_id,client_id, entity_type):
     try:
         with engine.connect() as conn:
             query = text("""
-        select session_id, entity_type, timestamp, energy,       
-		        row_number() over (partition by entity_type order by energy desc) as energy_rank 
-        from 
-	        (select session_id, client_id, message->'$.entityType' as entity_type,
-			        message->'$.pos' as position, 
-			        SQRT(POWER( message->'$.pos.x' - LAG(message->'$.pos.x',1) OVER (order by seq),2)+
-			        POWER( message->'$.pos.y' - LAG(message->'$.pos.y',1) OVER (order by seq),2)+
-			        POWER( message->'$.pos.z' - LAG(message->'$.pos.z',1) OVER (order by seq),2))/(ts - LAG(ts,1) OVER (order by seq)) as energy,
-			        ts as timestamp, seq
-	        from data
-	        where message->'$.clientId' = :client_id and session_id = :session_id and `type` = 'sync' 
-	        order by seq) as user_energy
-        where energy is not null
-        order by energy_rank, entity_type, energy DESC;
+            select client_id, session_id, timestamp,entity_type, energy
+            from 
+	            (select session_id, client_id, message->'$.entityType' as entity_type,
+			            message->'$.pos' as position, 
+			            SQRT(POWER( message->'$.pos.x' - LAG(message->'$.pos.x',1) OVER (order by seq),2)+
+			            POWER( message->'$.pos.y' - LAG(message->'$.pos.y',1) OVER (order by seq),2)+
+			            POWER( message->'$.pos.z' - LAG(message->'$.pos.z',1) OVER (order by seq),2))/(ts - LAG(ts,1) OVER (order by seq)) as energy,
+			            ts as timestamp, seq
+	            from data
+	            where message->'$.clientId' = 5 and session_id = 126 and `type` = 'sync' 
+	            order by seq) as user_energy
+            where energy is not null
+            order by entity_type, energy DESC;
 
             """
             )
