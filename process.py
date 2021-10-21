@@ -212,6 +212,49 @@ def mark_as_processed(capture_id, success):
     except Exception as e:
         print(e)
 
+
+def check_for_data_requests_table():
+    # check if data_requests exist, if not, create one 
+    with engine.connect() as conn:
+        query = """
+                show tables like 'data_requests';
+                """
+        result = conn.execute(query)
+        exist = list([r[0] for r in result])
+
+    if not (bool(exist)):
+        with engine.connect()as conn:
+            with conn.begin(): 
+                query = text("""
+                CREATE TABLE if not exists `data_requests`
+                (
+                processed_capture_id varchar(50) not null,
+                primary key (processed_capture_id),
+                who_can_access int not null,
+                who_requested int not null,
+                aggregation_function varchar(50) not null,
+                fis_it_fulfilled varchar(50),
+                url varchar(255)
+                );
+                """
+                )
+
+                conn.execute(query)
+
+            with conn.begin(): 
+                # will update to user input
+                query = text("""
+                INSERT INTO data_requests 
+                VALUES ('126_1630443513898', 2, 2, 'user_energy', 'NOT_STARTED', NULL);
+
+                """
+                )
+                conn.execute(query)
+
+        return "data_requests table created."
+
+
+
         
 if __name__ == "__main__":
 
@@ -231,6 +274,8 @@ if __name__ == "__main__":
             print('Nothing to process', time.strftime("%H:%M:%S", time.localtime()))
             # rinse & repeat
             time.sleep(10)
+        print(check_for_data_requests_table())
+
 
 
 
