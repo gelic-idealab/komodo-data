@@ -169,7 +169,10 @@ def user_energy(session_id,client_id, entity_type):
             )
 
             result = conn.execute(query,{"session_id":session_id, "client_id":client_id, "entity_type":entity_type})
-
+            count = [r[0:] for r in result]
+            df = pd.DataFrame(count, columns = ['session_id','timestamp','entity_type','energy','energy_rank'])
+            df.to_csv('energy_out.csv',index=False)
+            print("user energy csv file downloaded!")            
     except ValueError:
         return "Argument(s) missing for user_energy."
     except:
@@ -228,13 +231,13 @@ def check_for_data_requests_table():
                 query = text("""
                 CREATE TABLE if not exists `data_requests`
                 (
+                request_id int NOT NULL AUTO_INCREMENT,
                 processed_capture_id varchar(50) not null,
-                primary key (processed_capture_id),
-                who_can_access int not null,
                 who_requested int not null,
                 aggregation_function varchar(50) not null,
-                fis_it_fulfilled varchar(50),
-                url varchar(255)
+                is_it_fulfilled varchar(50),
+                url varchar(255),
+                primary key (request_id)
                 );
                 """
                 )
@@ -244,14 +247,17 @@ def check_for_data_requests_table():
             with conn.begin(): 
                 # will update to user input
                 query = text("""
-                INSERT INTO data_requests 
-                VALUES ('126_1630443513898', 2, 2, 'user_energy', 'NOT_STARTED', NULL);
+                INSERT INTO data_requests (`processed_capture_id`, `who_requested`, `aggregation_function`, `is_it_fulfilled`)
+                VALUES ('126_1630443513898', 2, 'user_energy', 'NOT_STARTED');
 
                 """
                 )
                 conn.execute(query)
 
         return "data_requests table created."
+    else: 
+        return "data_requests table exists."
+
 
 
 

@@ -4,7 +4,7 @@ from unittest import TestCase
 import numpy as np
 from numpy.testing._private.utils import assert_equal
 import process 
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, text, over
 import os
 import os.path
 import sys
@@ -64,14 +64,16 @@ class TestQuery(unittest.TestCase):
         
         with engine.connect() as conn:
             with conn.begin(): 
+                # query = 
+                # conn.execute(query)
                 query = text("""
                 select client_id, session_id, timestamp,entity_type, energy
                 from 
-	                (select session_id, client_id, message->'$.entityType' as entity_type,
-			                message->'$.pos' as position, 
-			                SQRT(POWER( message->'$.pos.x' - LAG(message->'$.pos.x',1) OVER (order by seq),2)+
-			                POWER( message->'$.pos.y' - LAG(message->'$.pos.y',1) OVER (order by seq),2)+
-			                POWER( message->'$.pos.z' - LAG(message->'$.pos.z',1) OVER (order by seq),2))/(ts - LAG(ts,1) OVER (order by seq)) as energy,
+	                (select session_id, client_id, message->'$.entityType' as entity_type,\
+			                message->'$.pos' as position, \
+			                SQRT(POWER( message->'$.pos.x' - LAG(message->'$.pos.x',1) OVER (order by seq),2)+\
+			                POWER( message->'$.pos.y' - LAG(message->'$.pos.y',1) OVER (order by seq),2)+\
+			                POWER( message->'$.pos.z' - LAG(message->'$.pos.z',1) OVER (order by seq),2))/(ts - LAG(ts,1) OVER (order by seq)) as energy,\
 			                ts as timestamp, seq
 	                from data
 	                where message->'$.clientId' = 5 and session_id = 126 and `type` = 'sync' 
@@ -89,12 +91,13 @@ class TestQuery(unittest.TestCase):
             df = pd.DataFrame(count, columns = ['session_id','timestamp','entity_type','energy','energy_rank'])
             df.to_csv('energy_out.csv',index=False)
             out_list = df.head(5).values.tolist()
+            
 
-            test = [[126,'0',1630443609231,0.536178417303133,1],
-                    [126,'1',1630443588867,0.9551319817369843,1],
-                    [126,'2',1630443590718,1.4284266059504278,1],
-                    [126,'3',1630443696530,0.13668642437699915,1],
-                    [126,'0',1630443614316,0.47170262033491217,2]]
+            test = [[5,126,1630443609231,'0',0.536178417303133],
+                    [5,126,1630443614316,'0',0.47170262033491217],
+                    [5,126,1630443612993,'0',0.4564820648139896],
+                    [5,126,1630443617111,'0',0.45187208310036364],
+                    [5,126,1630443610928,'0',0.44620929903013185]]
 
         # aggregate_interaction
         self.assertEqual(sum, 3357)
