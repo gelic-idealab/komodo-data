@@ -83,6 +83,19 @@ def aggregate_interaction_type(session_id, interaction_type):
                 )
 
                 conn.execute(query,{"session_id":session_id, "interaction_type":interaction_type})
+
+            with conn.begin():
+                query = text("""
+                SELECT * 
+                FROM aggregate_interaction;
+                """
+                )
+                result = conn.execute(query)
+                count = [r[0:] for r in result]
+                df = pd.DataFrame(count, columns = ['client_id','interaction_count'])
+                df.to_csv('aggregate_interaction.csv',index=False)
+                print("aggregate_interaction csv file downloaded!") 
+
     except ValueError:
         return "Argument(s) missing for aggregate_interaction_type."
     except: 
@@ -137,12 +150,22 @@ def aggregate_user(session_id,client_id):
                 )
 
                 conn.execute(query)
+            with conn.begin():
+                query = text("""
+                SELECT * 
+                FROM aggregate_user;
+                """
+                )
+                result = conn.execute(query)
+                count = [r[0:] for r in result]
+                df = pd.DataFrame(count, columns = ['entity_type','user_count'])
+                df.to_csv('aggregate_user.csv',index=False)
+                print("aggregate_user csv file downloaded!") 
 
     except ValueError:
         return "Argument(s) missing for aggregate_user."
     except:
         return "Query Error: aggregation_user"
-
 
     return True
 
@@ -170,9 +193,10 @@ def user_energy(session_id,client_id, entity_type):
 
             result = conn.execute(query,{"session_id":session_id, "client_id":client_id, "entity_type":entity_type})
             count = [r[0:] for r in result]
-            df = pd.DataFrame(count, columns = ['session_id','timestamp','entity_type','energy','energy_rank'])
+            df = pd.DataFrame(count, columns = ['client_d','session_id','timestamp','entity_type','energy'])
             df.to_csv('energy_out.csv',index=False)
-            print("user energy csv file downloaded!")            
+            print("user energy csv file downloaded!")      
+
     except ValueError:
         return "Argument(s) missing for user_energy."
     except:
@@ -218,50 +242,56 @@ def mark_as_processed(capture_id, success):
 
 def check_for_data_requests_table():
     # check if data_requests exist, if not, create one 
-    with engine.connect() as conn:
-        query = """
-                show tables like 'data_requests';
-                """
-        result = conn.execute(query)
-        exist = list([r[0] for r in result])
+    try:
+        with engine.connect() as conn:
+            query = """
+                    show tables like 'data_requests';
+                    """
+            result = conn.execute(query)
+            exist = list([r[0] for r in result])
 
-    if not (bool(exist)):
-        with engine.connect()as conn:
-            with conn.begin(): 
-                query = text("""
-                CREATE TABLE if not exists `data_requests`
-                (
-                request_id int NOT NULL AUTO_INCREMENT,
-                processed_capture_id varchar(50) not null,
-                who_requested int not null,
-                aggregation_function varchar(50) not null,
-                is_it_fulfilled varchar(50),
-                url varchar(255),
-                primary key (request_id)
-                );
-                """
-                )
+        if not (bool(exist)):
+            with engine.connect()as conn:
+                with conn.begin(): 
+                    query = text("""
+                    CREATE TABLE if not exists `data_requests`
+                    (
+                    request_id int NOT NULL AUTO_INCREMENT,
+                    processed_capture_id varchar(50) not null,
+                    who_requested int not null,
+                    aggregation_function varchar(50) not null,
+                    is_it_fulfilled int,
+                    url varchar(255),
+                    primary key (request_id)
+                    );
+                    """
+                    )
 
-                conn.execute(query)
+                    conn.execute(query)
 
-            with conn.begin(): 
-                # will update to user input
-                query = text("""
-                INSERT INTO data_requests (`processed_capture_id`, `who_requested`, `aggregation_function`, `is_it_fulfilled`)
-                VALUES ('126_1630443513898', 2, 'user_energy', 'NOT_STARTED');
+                with conn.begin(): 
+                    # will update to user input
+                    query = text("""
+                    INSERT INTO data_requests (`processed_capture_id`, `who_requested`, `aggregation_function`, `is_it_fulfilled`)
+                    VALUES ('126_1630443513898', 2, 'user_energy', 0);
 
-                """
-                )
-                conn.execute(query)
+                    """
+                    )
+                    conn.execute(query)
+            print("data_requests table created.")
+            return True
+        else: 
+            print("data_requests table exists.")
+            return True
+    except: 
+        print("failed to create data_requests table.")
+        return False
 
-        return "data_requests table created."
-    else: 
-        return "data_requests table exists."
+
+#def aggregation_file_download():
 
 
 
-
-        
 if __name__ == "__main__":
 
     # infinite poll & process
@@ -280,7 +310,10 @@ if __name__ == "__main__":
             print('Nothing to process', time.strftime("%H:%M:%S", time.localtime()))
             # rinse & repeat
             time.sleep(10)
-        print(check_for_data_requests_table())
+        
+        # check data_request table and direct to respective functions
+        # if check_for_data_requests_table():
+        #     aggregation_file_download()
 
 
 

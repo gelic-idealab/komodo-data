@@ -5,6 +5,7 @@ import numpy as np
 from numpy.testing._private.utils import assert_equal
 import process 
 from sqlalchemy import create_engine, text, over
+from sqlalchemy.sql import *
 import os
 import os.path
 import sys
@@ -36,6 +37,7 @@ class TestQuery(unittest.TestCase):
             print(e)
             sys.exit(1)
         
+        #interaction testing
         interaction_flag = process.aggregate_interaction_type(126, 1) 
 
         with engine.connect() as conn:
@@ -49,6 +51,7 @@ class TestQuery(unittest.TestCase):
                 count = [r[1] for r in result]
                 sum = np.sum(count)
 
+        # aggregate_uer testing
         user_flag = process.aggregate_user(126,5) 
 
         with engine.connect() as conn:
@@ -62,9 +65,11 @@ class TestQuery(unittest.TestCase):
                 count = [r[1:] for r in result]
                 sum2 = np.sum(count)
         
+        # user_energy testing
+
         with engine.connect() as conn:
             with conn.begin(): 
-                # query = 
+                # query = select()
                 # conn.execute(query)
                 query = text("""
                 select client_id, session_id, timestamp,entity_type, energy
@@ -85,13 +90,12 @@ class TestQuery(unittest.TestCase):
             )
                 conn.execute(query)
 
-
             result = conn.execute(query)
             count = [r[0:] for r in result]
-            df = pd.DataFrame(count, columns = ['session_id','timestamp','entity_type','energy','energy_rank'])
+            df = pd.DataFrame(count, columns = ['client_id','session_id','timestamp','entity_type','energy'])
             df.to_csv('energy_out.csv',index=False)
             out_list = df.head(5).values.tolist()
-            
+
 
             test = [[5,126,1630443609231,'0',0.536178417303133],
                     [5,126,1630443614316,'0',0.47170262033491217],
