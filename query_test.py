@@ -3,8 +3,9 @@ import unittest
 from unittest import TestCase
 import numpy as np
 from numpy.testing._private.utils import assert_equal
+from sqlalchemy.sql.sqltypes import BIGINT, JSON, Integer
 import process 
-from sqlalchemy import create_engine, text, over
+from sqlalchemy import create_engine, text, over,Table, Column, String, MetaData
 from sqlalchemy.sql import *
 import os
 import os.path
@@ -69,7 +70,17 @@ class TestQuery(unittest.TestCase):
 
         with engine.connect() as conn:
             with conn.begin(): 
-                # query = select()
+                # metadata= MetaData()
+                # data = Table('user', metadata, Column('capture_id', String),
+                #             Column('client_id', Integer),
+                #             Column('id', Integer,primary_key=True),
+                #             Column('message', JSON),
+                #             Column('seq', Integer),
+                #             Column('session_id', Integer),
+                #             Column('ts', BIGINT),
+                #             Column('type', String)
+                #             )
+                # query = select(data.c.client_id,data.c.session_id,data.c.ts)
                 # conn.execute(query)
                 query = text("""
                 select client_id, session_id, timestamp,entity_type, energy
@@ -102,6 +113,7 @@ class TestQuery(unittest.TestCase):
                     [5,126,1630443612993,'0',0.4564820648139896],
                     [5,126,1630443617111,'0',0.45187208310036364],
                     [5,126,1630443610928,'0',0.44620929903013185]]
+
 
         # aggregate_interaction
         self.assertEqual(sum, 3357)

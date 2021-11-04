@@ -262,6 +262,7 @@ def check_for_data_requests_table():
                     aggregation_function varchar(50) not null,
                     is_it_fulfilled int,
                     url varchar(255),
+                    message json,
                     primary key (request_id)
                     );
                     """
@@ -272,8 +273,8 @@ def check_for_data_requests_table():
                 with conn.begin(): 
                     # will update to user input
                     query = text("""
-                    INSERT INTO data_requests (`processed_capture_id`, `who_requested`, `aggregation_function`, `is_it_fulfilled`)
-                    VALUES ('126_1630443513898', 2, 'user_energy', 0);
+                    INSERT INTO data_requests (`request_id`,`processed_capture_id`, `who_requested`, `aggregation_function`, `is_it_fulfilled`)
+                    VALUES (2,'126_1630443513898', 2, 'user_energy', 0);
 
                     """
                     )
@@ -288,7 +289,26 @@ def check_for_data_requests_table():
         return False
 
 
-#def aggregation_file_download():
+# def aggregation_file_download():
+#     with engine.connect() as conn:
+#         with conn.begin(): 
+#             query = text("""
+#             select request_id,aggregation_function, is_it_fulfilled 
+#             from data_requests
+#             where is_it_fulfilled = 0
+#             order by request_id;
+#             """
+#             )
+#             result = conn.execute(query)
+#             count = [r[0:] for r in result]
+#             temp_df = pd.DataFrame(count, columns = ['request_id','aggregation_function','is_it_fulfilled'])
+#             temp_df.set_index("request_id",inplace = True)
+#             for index, row in temp_df.iterrows():
+#                 request_id = index
+#                 aggregation_function = row['aggregation_function']
+#                 is_it_fulfilled = row['is_it_fulfilled']
+#                 if aggregation_function == "user_energy":
+#                     user_energy(126,client_id, entity_type)
 
 
 
