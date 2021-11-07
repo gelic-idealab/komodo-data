@@ -70,18 +70,6 @@ class TestQuery(unittest.TestCase):
 
         with engine.connect() as conn:
             with conn.begin(): 
-                # metadata= MetaData()
-                # data = Table('user', metadata, Column('capture_id', String),
-                #             Column('client_id', Integer),
-                #             Column('id', Integer,primary_key=True),
-                #             Column('message', JSON),
-                #             Column('seq', Integer),
-                #             Column('session_id', Integer),
-                #             Column('ts', BIGINT),
-                #             Column('type', String)
-                #             )
-                # query = select(data.c.client_id,data.c.session_id,data.c.ts)
-                # conn.execute(query)
                 query = text("""
                 select client_id, session_id, timestamp,entity_type, energy
                 from 

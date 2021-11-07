@@ -3,7 +3,7 @@ import os.path
 import sys
 import time
 import json
-from numpy.core.defchararray import count
+from numpy.core.defchararray import count, index
 import pandas as pd
 import numpy as np
 import unittest as ut
@@ -93,7 +93,7 @@ def aggregate_interaction_type(session_id, interaction_type):
                 result = conn.execute(query)
                 count = [r[0:] for r in result]
                 df = pd.DataFrame(count, columns = ['client_id','interaction_count'])
-                df.to_csv('aggregate_interaction.csv',index=False)
+                df.to_csv("aggregate_interaction_" + time.strftime('%Y-%m-%d %H-%S') + ".csv",index=False)
                 print("aggregate_interaction csv file downloaded!") 
 
     except ValueError:
@@ -159,7 +159,8 @@ def aggregate_user(session_id,client_id):
                 result = conn.execute(query)
                 count = [r[0:] for r in result]
                 df = pd.DataFrame(count, columns = ['entity_type','user_count'])
-                df.to_csv('aggregate_user.csv',index=False)
+                df.to_csv("aggregate_user_" + time.strftime('%Y-%m-%d %H-%S') + ".csv",index=False)
+
                 print("aggregate_user csv file downloaded!") 
 
     except ValueError:
@@ -194,7 +195,7 @@ def user_energy(session_id,client_id, entity_type):
             result = conn.execute(query,{"session_id":session_id, "client_id":client_id, "entity_type":entity_type})
             count = [r[0:] for r in result]
             df = pd.DataFrame(count, columns = ['client_d','session_id','timestamp','entity_type','energy'])
-            df.to_csv('energy_out.csv',index=False)
+            df.to_csv("user_energy_" + time.strftime('%Y-%m-%d %H-%S') + ".csv",index=False)
             print("user energy csv file downloaded!")      
 
     except ValueError:
@@ -263,6 +264,7 @@ def check_for_data_requests_table():
                     is_it_fulfilled int,
                     url varchar(255),
                     message json,
+                    file_location varchar(255),
                     primary key (request_id)
                     );
                     """
@@ -289,27 +291,60 @@ def check_for_data_requests_table():
         return False
 
 
-# def aggregation_file_download():
-#     with engine.connect() as conn:
-#         with conn.begin(): 
-#             query = text("""
-#             select request_id,aggregation_function, is_it_fulfilled 
-#             from data_requests
-#             where is_it_fulfilled = 0
-#             order by request_id;
-#             """
-#             )
-#             result = conn.execute(query)
-#             count = [r[0:] for r in result]
-#             temp_df = pd.DataFrame(count, columns = ['request_id','aggregation_function','is_it_fulfilled'])
-#             temp_df.set_index("request_id",inplace = True)
-#             for index, row in temp_df.iterrows():
-#                 request_id = index
-#                 aggregation_function = row['aggregation_function']
-#                 is_it_fulfilled = row['is_it_fulfilled']
-#                 if aggregation_function == "user_energy":
-#                     user_energy(126,client_id, entity_type)
+def aggregation_file_download():
+    with engine.connect() as conn:
+        with conn.begin(): 
+            query = text("""
+            select request_id, aggregation_function, is_it_fulfilled, message->'$.clientId' as client_id,
+	                message->'$.sessionId'  as session_id, message->'$.entityType'  as entity_type,
+	                message->'$.interactionType'  as interaction_type
+            from data_requests
+            where is_it_fulfilled = 0
+            order by request_id;
+            """
+            )
+            result = conn.execute(query)
+            count = [r[0:] for r in result]
+            temp_df = pd.DataFrame(count, columns = ['request_id','aggregation_function','is_it_fulfilled','client_id','session_id','entity_type','interaction_type'])
+            temp_df.set_index("request_id",inplace = True)
+            for index, row in temp_df.iterrows():
+                request_id = index
+                # parse all inputs 
+                aggregation_function = row['aggregation_function']
+                is_it_fulfilled = row['is_it_fulfilled']
+                client_id = row['client_id']
+                session_id = row['session_id']
+                entity_type = row['entity_type']
+                interaction_type = row['interaction_type']
 
+                if aggregation_function == "user_energy":
+                    label = user_energy(126,client_id, entity_type)
+                    if label: # if csv file downloaded
+                        update_data_request(request_id, 1,".../komodo-data/aggregation_function.csv")
+                if aggregation_function == "aggregate_interaction":
+                    label = aggregate_interaction_type(session_id,interaction_type)
+                    if label: 
+                        update_data_request(request_id, 1,".../komodo-data/aggregation_user.csv")
+                if aggregation_function == "aggregate_user":
+                    label = aggregate_user(session_id,client_id)
+                    if label: 
+                        update_data_request(request_id, 1,".../komodo-data/user_energy.csv")
+                   
+
+def update_data_request(request_id,fulfilled_flag,file_location):
+    try:
+        query = text("""
+                    UPDATE `data_requests`
+                    SET is_it_fulfilled = :f, file_location = :fl
+                    where request_id = :ri;
+                    """)
+        with engine.connect() as conn:
+            result = conn.execute(query, {'f': fulfilled_flag, 'fl': file_location,'ri':request_id})
+
+    except Exception as e:
+        print(e)
+
+    
 
 
 if __name__ == "__main__":
@@ -332,8 +367,8 @@ if __name__ == "__main__":
             time.sleep(10)
         
         # check data_request table and direct to respective functions
-        # if check_for_data_requests_table():
-        #     aggregation_file_download()
+        if check_for_data_requests_table():
+            aggregation_file_download()
 
 
 
