@@ -8,6 +8,7 @@ import pandas as pd
 import numpy as np
 import unittest as ut
 from sqlalchemy import create_engine, text, types
+from sqlalchemy.sql.expression import null
 
 # import db configs
 from config import *
@@ -96,10 +97,8 @@ def aggregate_interaction_type(session_id, interaction_type):
                 df.to_csv("aggregate_interaction_" + time.strftime('%Y-%m-%d %H-%S') + ".csv",index=False)
                 print("aggregate_interaction csv file downloaded!") 
 
-    except ValueError:
-        return "Argument(s) missing for aggregate_interaction_type."
-    except: 
-        return "Query Error: aggregation_interaction"
+    except Exception as e:
+        return e
 
         
     return True
@@ -163,10 +162,8 @@ def aggregate_user(session_id,client_id):
 
                 print("aggregate_user csv file downloaded!") 
 
-    except ValueError:
-        return "Argument(s) missing for aggregate_user."
-    except:
-        return "Query Error: aggregation_user"
+    except Exception as e:
+        return e
 
     return True
 
@@ -198,10 +195,8 @@ def user_energy(session_id,client_id, entity_type):
             df.to_csv("user_energy_" + time.strftime('%Y-%m-%d %H-%S') + ".csv",index=False)
             print("user energy csv file downloaded!")      
 
-    except ValueError:
-        return "Argument(s) missing for user_energy."
-    except:
-        return "Query Error: user_energy"
+    except Exception as e:
+        return e
 
 
     return True
@@ -273,11 +268,9 @@ def check_for_data_requests_table():
                     conn.execute(query)
 
                 with conn.begin(): 
-                    # will update to user input
                     query = text("""
-                    INSERT INTO data_requests (`request_id`,`processed_capture_id`, `who_requested`, `aggregation_function`, `is_it_fulfilled`)
-                    VALUES (2,'126_1630443513898', 2, 'user_energy', 0);
-
+                    INSERT INTO data_requests (`processed_capture_id`, `who_requested`, `aggregation_function`, `is_it_fulfilled`,`message`)
+                    VALUES ('126_1630443513898', 2, 'aggregate_user', 0,'{"sessionId": 126, "clientId": null, "captureId": null, "type": "aggregate user", "interactionType": null,"entityType": null}');
                     """
                     )
                     conn.execute(query)
@@ -286,8 +279,8 @@ def check_for_data_requests_table():
         else: 
             print("data_requests table exists.")
             return True
-    except: 
-        print("failed to create data_requests table.")
+    except Exception as e:
+        print(e)
         return False
 
 
@@ -318,17 +311,26 @@ def aggregation_file_download():
                 interaction_type = row['interaction_type']
 
                 if aggregation_function == "user_energy":
-                    label = user_energy(126,client_id, entity_type)
-                    if label: # if csv file downloaded
-                        update_data_request(request_id, 1,".../komodo-data/aggregation_function.csv")
+                    if (entity_type != "null" and client_id!= null):
+                        label = user_energy(126,client_id, entity_type)
+                        if label: # if csv file downloaded
+                            update_data_request(request_id, 1,".../komodo-data/aggregation_function.csv")
+                    else: 
+                        print("Argument(s) for user_energy not valid!")
                 if aggregation_function == "aggregate_interaction":
-                    label = aggregate_interaction_type(session_id,interaction_type)
-                    if label: 
-                        update_data_request(request_id, 1,".../komodo-data/aggregation_user.csv")
+                    if (session_id!= "null" and interaction_type!= "null"):
+                        label = aggregate_interaction_type(session_id,interaction_type)
+                        if label: 
+                            update_data_request(request_id, 1,".../komodo-data/aggregation_user.csv")
+                    else: 
+                        print("Argument(s) for aggregate_interaction not valid!")
                 if aggregation_function == "aggregate_user":
-                    label = aggregate_user(session_id,client_id)
-                    if label: 
-                        update_data_request(request_id, 1,".../komodo-data/user_energy.csv")
+                    if (client_id!= "null" and session_id!= "null"):
+                        label = aggregate_user(session_id,client_id)
+                        if label: 
+                            update_data_request(request_id, 1,".../komodo-data/user_energy.csv")
+                    else: 
+                        print("Argument(s) for aggregate_user not valid!")
                    
 
 def update_data_request(request_id,fulfilled_flag,file_location):
@@ -343,8 +345,6 @@ def update_data_request(request_id,fulfilled_flag,file_location):
 
     except Exception as e:
         print(e)
-
-    
 
 
 if __name__ == "__main__":
