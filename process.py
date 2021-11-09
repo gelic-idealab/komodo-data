@@ -224,6 +224,14 @@ def check_for_data_requests_table():
             with engine.connect()as conn:
                 with conn.begin(): 
                     query = text("""
+                    DROP TABLE IF EXISTS `data_requests`;
+                    """
+                    )
+
+                    conn.execute(query)
+
+                with conn.begin(): 
+                    query = text("""
                     CREATE TABLE if not exists `data_requests`
                     (
                     request_id int NOT NULL AUTO_INCREMENT,
@@ -232,7 +240,7 @@ def check_for_data_requests_table():
                     aggregation_function varchar(50) not null,
                     is_it_fulfilled int,
                     url varchar(255),
-                    message json,
+                    message JSON,
                     file_location varchar(255),
                     primary key (request_id)
                     );
