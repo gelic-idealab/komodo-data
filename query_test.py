@@ -70,7 +70,7 @@ class TestQuery(unittest.TestCase):
                 sum2 = np.sum(count)
 
         # aggregate_interaction
-        self.assertEqual(sum, 1295) 
+        self.assertEqual(sum, 1288) 
         # aggregate_user
         self.assertEqual(sum2, 16797)
 

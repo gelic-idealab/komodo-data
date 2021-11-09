@@ -286,6 +286,7 @@ def aggregation_file_download():
 
                 if aggregation_function == "aggregate_interaction_type":
                     if (session_id!= "null" and interaction_type!= "null"):
+                        print(session_id,interaction_type,request_id)
                         aggregate_interaction_type(session_id,interaction_type,request_id)
                     else: 
                         print("Argument(s) for aggregate_interaction not valid!")
