@@ -145,14 +145,6 @@ def aggregate_user(session_id,client_id,request_id):
 
                 conn.execute(query,{"session_id":session_id, "client_id":client_id})
 
-            with conn.begin(): 
-                query = text("""
-                UPDATE komodo.aggregate_user
-                SET entity_type = replace(replace(replace(replace(entity_type, 0, 'head'), 1, 'left_hand'), 2, 'right_hand'), 3 ,'spawned_entity');
-                """
-                )
-
-                conn.execute(query)
             with conn.begin():
                 query = text("""
                 SELECT * 
