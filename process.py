@@ -93,7 +93,6 @@ def aggregate_interaction_type(session_id, interaction_type,request_id):
                 )
                 result = conn.execute(query)
                 count = [r[0:] for r in result]
-                print(count)
                 df = pd.DataFrame(count, columns = ['client_id','interaction_count'])
                 filename = str("aggregate_interaction_" + time.strftime('%Y-%m-%d %H-%S') + ".csv")
                 df.to_csv(filename,index=False)
@@ -214,14 +213,7 @@ def check_for_data_requests_table():
     # check if data_requests exist, if not, create one 
     try:
         with engine.connect() as conn:
-            with conn.begin(): 
-                    query = text("""
-                    DROP TABLE IF EXISTS `data_requests`;
-                    """
-                    )
-
-                    conn.execute(query)
-            with conn.begin():      
+            with conn.begin():  
                 query = """
                         show tables like 'data_requests';
                         """
@@ -294,7 +286,6 @@ def aggregation_file_download():
 
                 if aggregation_function == "aggregate_interaction_type":
                     if (session_id!= "null" and interaction_type!= "null"):
-                        print(session_id,interaction_type,request_id)
                         aggregate_interaction_type(session_id,interaction_type,request_id)
                     else: 
                         print("Argument(s) for aggregate_interaction not valid!")
