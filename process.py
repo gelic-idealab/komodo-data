@@ -214,22 +214,22 @@ def check_for_data_requests_table():
     # check if data_requests exist, if not, create one 
     try:
         with engine.connect() as conn:
-            query = """
-                    show tables like 'data_requests';
-                    """
-            result = conn.execute(query)
-            exist = list([r[0] for r in result])
-
-        if not (bool(exist)):
-            with engine.connect()as conn:
-                with conn.begin(): 
+            with conn.begin(): 
                     query = text("""
                     DROP TABLE IF EXISTS `data_requests`;
                     """
                     )
 
                     conn.execute(query)
+            with conn.begin():      
+                query = """
+                        show tables like 'data_requests';
+                        """
+                result = conn.execute(query)
+                exist = list([r[0] for r in result])
 
+        if not (bool(exist)):
+            with engine.connect()as conn:
                 with conn.begin(): 
                     query = text("""
                     CREATE TABLE if not exists `data_requests`
