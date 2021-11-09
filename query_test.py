@@ -51,7 +51,7 @@ class TestQuery(unittest.TestCase):
                 """
                 )
                 result = conn.execute(query)
-                count = [r[0:] for r in result]
+                count = [r[1:] for r in result]
                 sum = np.sum(count)
 
         # aggregate_uer testing
@@ -70,8 +70,8 @@ class TestQuery(unittest.TestCase):
                 sum2 = np.sum(count)
 
         # aggregate_interaction
-        self.assertEqual(sum, 1295)
+        self.assertEqual(sum, 1295) 
         # aggregate_user
-        self.assertEqual(sum2, 50391)
+        self.assertEqual(sum2, 16797)
 
 
