@@ -93,19 +93,19 @@ def aggregate_interaction_type(session_id, interaction_type,request_id):
                 )
                 result = conn.execute(query)
                 count = [r[0:] for r in result]
+                print(count)
                 df = pd.DataFrame(count, columns = ['client_id','interaction_count'])
                 filename = str("aggregate_interaction_" + time.strftime('%Y-%m-%d %H-%S') + ".csv")
                 df.to_csv(filename,index=False)
-                file_path = os.path.abspath(filename)
                 print("aggregate_interaction csv file downloaded!") 
+
+                file_path = os.path.abspath(filename)
                 update_data_request(request_id, 1, file_path)
                 return True
 
     except Exception as e:
         print(e)
         return False
-
-        
     
 
 def aggregate_user(session_id,client_id,request_id):
@@ -170,44 +170,6 @@ def aggregate_user(session_id,client_id,request_id):
                 update_data_request(request_id, 1, file_path)
 
                 return True
-    except Exception as e:
-        print(e)
-        return False
-
-
-
-
-def user_energy(session_id,client_id, entity_type,request_id):
-    try:
-        with engine.connect() as conn:
-            query = text("""
-            select client_id, session_id, timestamp,entity_type, energy
-            from 
-	            (select session_id, client_id, message->'$.entityType' as entity_type,
-			            message->'$.pos' as position, 
-			            SQRT(POWER( message->'$.pos.x' - LAG(message->'$.pos.x',1) OVER (order by seq),2)+
-			            POWER( message->'$.pos.y' - LAG(message->'$.pos.y',1) OVER (order by seq),2)+
-			            POWER( message->'$.pos.z' - LAG(message->'$.pos.z',1) OVER (order by seq),2))/(ts - LAG(ts,1) OVER (order by seq)) as energy,
-			            ts as timestamp, seq
-	            from data
-	            where message->'$.clientId' = :client_id and session_id = :session_id and `type` = 'sync' 
-	            order by seq) as user_energy
-            where energy is not null and entity_type = :entity_type
-            order by entity_type, energy DESC;
-
-            """
-            )
-
-            result = conn.execute(query,{"session_id":session_id, "client_id":client_id, "entity_type":entity_type})
-            count = [r[0:] for r in result]
-            df = pd.DataFrame(count, columns = ['client_d','session_id','timestamp','entity_type','energy'])
-            filename = str("user_energy_" + time.strftime('%Y-%m-%d %H-%S') + ".csv")
-            df.to_csv(filename,index=False)
-            file_path = os.path.abspath(filename)            
-            print("user energy csv file downloaded!")
-            update_data_request(request_id, 1, file_path)
-
-            return True
     except Exception as e:
         print(e)
         return False
@@ -282,7 +244,7 @@ def check_for_data_requests_table():
                 with conn.begin(): 
                     query = text("""
                     INSERT INTO data_requests (`processed_capture_id`, `who_requested`, `aggregation_function`, `is_it_fulfilled`,`message`)
-                    VALUES ('126_1630443513898', 2, 'aggregate_user', 0,'{"sessionId": 126, "clientId": 2, "captureId": null, "type": "aggregate user", "interactionType": null,"entityType": null}');
+                    VALUES ('126_1630443513898', 2, 'aggregate_interaction_type', 0,'{"sessionId": 126, "clientId": 5, "captureId": 1, "type": "aggregate interaction type", "interactionType": 1,"entityType": 0}');
                     """
                     )
                     conn.execute(query)
@@ -322,19 +284,15 @@ def aggregation_file_download():
                 entity_type = row['entity_type']
                 interaction_type = row['interaction_type']
 
-                if aggregation_function == "user_energy":
-                    if (entity_type != "null" and client_id!= "null"):
-                        label= user_energy(session_id,client_id, entity_type,request_id)
-                    else: 
-                        print("Argument(s) for user_energy not valid!")
-                if aggregation_function == "aggregate_interaction":
+                if aggregation_function == "aggregate_interaction_type":
                     if (session_id!= "null" and interaction_type!= "null"):
-                        label = aggregate_interaction_type(session_id,interaction_type,request_id)
+                        print(session_id,interaction_type,request_id)
+                        aggregate_interaction_type(session_id,interaction_type,request_id)
                     else: 
                         print("Argument(s) for aggregate_interaction not valid!")
                 if aggregation_function == "aggregate_user":
                     if (client_id!= "null" and session_id!= "null"):
-                        label= aggregate_user(session_id,client_id,request_id)
+                        aggregate_user(session_id,client_id,request_id)
                     else: 
                         print("Argument(s) for aggregate_user not valid!")
                    

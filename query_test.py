@@ -12,6 +12,8 @@ import os.path
 import sys
 from numpy.core.defchararray import count
 import pandas as pd
+import time
+
 
 # import db configs
 from config import *
@@ -39,7 +41,7 @@ class TestQuery(unittest.TestCase):
             sys.exit(1)
         
         #interaction testing
-        interaction_flag = process.aggregate_interaction_type(126, 1) 
+        interaction_flag = process.aggregate_interaction_type(126, 1, 1) 
 
         with engine.connect() as conn:
             with conn.begin(): 
@@ -49,11 +51,11 @@ class TestQuery(unittest.TestCase):
                 """
                 )
                 result = conn.execute(query)
-                count = [r[1] for r in result]
+                count = [r[0:] for r in result]
                 sum = np.sum(count)
 
         # aggregate_uer testing
-        user_flag = process.aggregate_user(126,5) 
+        user_flag = process.aggregate_user(126,5,2) 
 
         with engine.connect() as conn:
             with conn.begin(): 
@@ -64,49 +66,12 @@ class TestQuery(unittest.TestCase):
                 )
                 result = conn.execute(query)
                 count = [r[1:] for r in result]
+                print(count)
                 sum2 = np.sum(count)
-        
-        # user_energy testing
-
-        with engine.connect() as conn:
-            with conn.begin(): 
-                query = text("""
-                select client_id, session_id, timestamp,entity_type, energy
-                from 
-	                (select session_id, client_id, message->'$.entityType' as entity_type,\
-			                message->'$.pos' as position, \
-			                SQRT(POWER( message->'$.pos.x' - LAG(message->'$.pos.x',1) OVER (order by seq),2)+\
-			                POWER( message->'$.pos.y' - LAG(message->'$.pos.y',1) OVER (order by seq),2)+\
-			                POWER( message->'$.pos.z' - LAG(message->'$.pos.z',1) OVER (order by seq),2))/(ts - LAG(ts,1) OVER (order by seq)) as energy,\
-			                ts as timestamp, seq
-	                from data
-	                where message->'$.clientId' = 5 and session_id = 126 and `type` = 'sync' 
-	                order by seq) as user_energy
-                where energy is not null
-                order by entity_type, energy DESC;
-
-            """
-            )
-                conn.execute(query)
-
-            result = conn.execute(query)
-            count = [r[0:] for r in result]
-            df = pd.DataFrame(count, columns = ['client_id','session_id','timestamp','entity_type','energy'])
-            df.to_csv('energy_out.csv',index=False)
-            out_list = df.head(5).values.tolist()
-
-
-            test = [[5,126,1630443609231,'0',0.536178417303133],
-                    [5,126,1630443614316,'0',0.47170262033491217],
-                    [5,126,1630443612993,'0',0.4564820648139896],
-                    [5,126,1630443617111,'0',0.45187208310036364],
-                    [5,126,1630443610928,'0',0.44620929903013185]]
-
 
         # aggregate_interaction
-        self.assertEqual(sum, 3357)
+        self.assertEqual(sum, 3364)
         # aggregate_user
         self.assertEqual(sum2, 50391)
-        # user_energy
-        self.assertEqual(out_list, test)
+
 
