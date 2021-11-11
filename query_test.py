@@ -72,6 +72,6 @@ class TestQuery(unittest.TestCase):
         # aggregate_interaction
         self.assertEqual(sum, 1288) 
         # aggregate_user
-        self.assertEqual(sum2, 16797)
+        self.assertEqual(sum2, 16797) 
 
 
