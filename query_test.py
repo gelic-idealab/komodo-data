@@ -5,7 +5,7 @@ import numpy as np
 from numpy.testing._private.utils import assert_equal
 from sqlalchemy.sql.sqltypes import BIGINT, JSON, Integer
 import process 
-from sqlalchemy import create_engine, text, over,Table, Column, String, MetaData
+from sqlalchemy import create_engine, text
 from sqlalchemy.sql import *
 import os
 import os.path
@@ -54,7 +54,7 @@ class TestQuery(unittest.TestCase):
                 count = [r[1:] for r in result]
                 sum = np.sum(count)
 
-        # aggregate_uer testing
+        # aggregate_user testing
         user_flag = process.aggregate_user(126,5,2) 
 
         with engine.connect() as conn:
@@ -68,6 +68,17 @@ class TestQuery(unittest.TestCase):
                 count = [r[1:] for r in result]
                 print(count)
                 sum2 = np.sum(count)
+
+
+
+        
+        with conn.begin(): 
+            query = text("""
+            INSERT INTO data_requests (`processed_capture_id`, `who_requested`, `aggregation_function`, `is_it_fulfilled`,`message`)
+            VALUES ('126_1630443513898', 2, 'aggregate_interaction_type', 0,'{"sessionId": 126, "clientId": 5, "captureId": 1, "type": "aggregate interaction type", "interactionType": 1,"entityType": 0}');
+            """
+            )
+            conn.execute(query)
 
         # aggregate_interaction
         self.assertEqual(sum, 1288) 

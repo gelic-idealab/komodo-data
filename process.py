@@ -49,7 +49,7 @@ def check_for_unprocessed_captures():
 
     return ready
 
-def aggregate_interaction_type(session_id, interaction_type,request_id):
+def aggregate_interaction_type(session_id, interaction_type, request_id):
     try: 
         # aggregate by interaction types 
         with engine.connect() as conn:
@@ -93,21 +93,27 @@ def aggregate_interaction_type(session_id, interaction_type,request_id):
                 )
                 result = conn.execute(query)
                 count = [r[0:] for r in result]
+
+                # result to dataframe
                 df = pd.DataFrame(count, columns = ['client_id','interaction_count'])
                 filename = str("aggregate_interaction_" + time.strftime('%Y-%m-%d %H-%S') + ".csv")
                 df.to_csv(filename,index=False)
                 print("aggregate_interaction csv file downloaded!") 
 
+                # grab and add file location back to data_request table
                 file_path = os.path.abspath(filename)
                 update_data_request(request_id, 1, file_path)
+
+                # return True if aggregation function completed and csv got downloaded
                 return True
 
     except Exception as e:
+        # return False and print error messages
         print(e)
         return False
     
 
-def aggregate_user(session_id,client_id,request_id):
+def aggregate_user(session_id, client_id, request_id):
     # aggregate by users
     try:
         with engine.connect()as conn:
@@ -153,15 +159,22 @@ def aggregate_user(session_id,client_id,request_id):
                 )
                 result = conn.execute(query)
                 count = [r[0:] for r in result]
+
+                # result to dataframe
                 df = pd.DataFrame(count, columns = ['entity_type','user_count'])
                 filename = str("aggregate_user_" + time.strftime('%Y-%m-%d %H-%S') + ".csv")
                 df.to_csv(filename,index=False)
+
+                # grab and add file back to data_request table
                 file_path = os.path.abspath(filename)
                 print("aggregate_user csv file downloaded!") 
                 update_data_request(request_id, 1, file_path)
-
+                
+                # return True if aggregation function completed and csv got downloaded
                 return True
+
     except Exception as e:
+        # return False and print error messages
         print(e)
         return False
 
@@ -233,19 +246,14 @@ def check_for_data_requests_table():
 
                     conn.execute(query)
 
-                with conn.begin(): 
-                    query = text("""
-                    INSERT INTO data_requests (`processed_capture_id`, `who_requested`, `aggregation_function`, `is_it_fulfilled`,`message`)
-                    VALUES ('126_1630443513898', 2, 'aggregate_interaction_type', 0,'{"sessionId": 126, "clientId": 5, "captureId": 1, "type": "aggregate interaction type", "interactionType": 1,"entityType": 0}');
-                    """
-                    )
-                    conn.execute(query)
             print("data_requests table created.")
             return True
         else: 
             print("data_requests table exists.")
             return True
+
     except Exception as e:
+        # return False and print error messages
         print(e)
         return False
 
@@ -264,8 +272,11 @@ def aggregation_file_download():
             )
             result = conn.execute(query)
             count = [r[0:] for r in result]
+
             temp_df = pd.DataFrame(count, columns = ['request_id','aggregation_function','is_it_fulfilled','client_id','session_id','entity_type','interaction_type'])
             temp_df.set_index("request_id",inplace = True)
+
+            # iterate rows in data_request table
             for index, row in temp_df.iterrows():
                 request_id = index
                 # parse all inputs 
@@ -276,6 +287,7 @@ def aggregation_file_download():
                 entity_type = row['entity_type']
                 interaction_type = row['interaction_type']
 
+                # direct rows to functions and download CSV
                 if aggregation_function == "aggregate_interaction_type":
                     if (session_id!= "null" and interaction_type!= "null"):
                         print(session_id,interaction_type,request_id)
@@ -290,6 +302,7 @@ def aggregation_file_download():
                    
 
 def update_data_request(request_id,fulfilled_flag,file_location):
+    # update fulfilled flag to 1, once aggregation function completed and csv files got downloaded
     try:
         query = text("""
                     UPDATE `data_requests`
