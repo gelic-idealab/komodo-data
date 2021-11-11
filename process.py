@@ -246,6 +246,14 @@ def check_for_data_requests_table():
 
                     conn.execute(query)
 
+                with conn.begin(): 
+                    query = text("""
+                    INSERT INTO data_requests (`processed_capture_id`, `who_requested`, `aggregation_function`, `is_it_fulfilled`,`message`)
+                    VALUES ('666_9999999999999', 2, 'this_is_test_function', 1,'{"sessionId": 666, "clientId": 888, "captureId": 777, "type": "test function", "interactionType": 1,"entityType": 0}');
+                    """
+                    )
+                    conn.execute(query)
+
             print("data_requests table created.")
             return True
         else: 
@@ -290,7 +298,6 @@ def aggregation_file_download():
                 # direct rows to functions and download CSV
                 if aggregation_function == "aggregate_interaction_type":
                     if (session_id!= "null" and interaction_type!= "null"):
-                        print(session_id,interaction_type,request_id)
                         aggregate_interaction_type(session_id,interaction_type,request_id)
                     else: 
                         print("Argument(s) for aggregate_interaction not valid!")

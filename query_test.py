@@ -70,16 +70,6 @@ class TestQuery(unittest.TestCase):
                 sum2 = np.sum(count)
 
 
-
-        
-        with conn.begin(): 
-            query = text("""
-            INSERT INTO data_requests (`processed_capture_id`, `who_requested`, `aggregation_function`, `is_it_fulfilled`,`message`)
-            VALUES ('126_1630443513898', 2, 'aggregate_interaction_type', 0,'{"sessionId": 126, "clientId": 5, "captureId": 1, "type": "aggregate interaction type", "interactionType": 1,"entityType": 0}');
-            """
-            )
-            conn.execute(query)
-
         # aggregate_interaction
         self.assertEqual(sum, 1288) 
         # aggregate_user
