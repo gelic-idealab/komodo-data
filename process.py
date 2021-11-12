@@ -3,11 +3,12 @@ import os.path
 import sys
 import time
 import json
-from numpy.core.defchararray import count
+from numpy.core.defchararray import count, index
 import pandas as pd
 import numpy as np
 import unittest as ut
 from sqlalchemy import create_engine, text, types
+from sqlalchemy.sql.expression import null
 
 # import db configs
 from config import *
@@ -48,13 +49,13 @@ def check_for_unprocessed_captures():
 
     return ready
 
-def aggregate_interaction_type(session_id, interaction_type):
+def aggregate_interaction_type(session_id, interaction_type, request_id):
     try: 
         # aggregate by interaction types 
         with engine.connect() as conn:
             with conn.begin(): 
                 query = text("""
-                DROP TABLE IF EXISTS `komodo`.`aggregate_interaction`;
+                DROP TABLE IF EXISTS `aggregate_interaction`;
                 """
                 )
 
@@ -62,7 +63,9 @@ def aggregate_interaction_type(session_id, interaction_type):
 
             with conn.begin(): 
                 query = text("""
-                CREATE TABLE `komodo`.`aggregate_interaction` (client_id int not null,
+                CREATE TABLE `aggregate_interaction` 
+                (
+                client_id int not null,
                 primary key (client_id),
                 interaction_count int not null);
                 """
@@ -81,19 +84,42 @@ def aggregate_interaction_type(session_id, interaction_type):
                 )
 
                 conn.execute(query,{"session_id":session_id, "interaction_type":interaction_type})
-    except ValueError:
-        return "Argument(s) missing for aggregate_interaction_type."
 
-        
-    return True
+            with conn.begin():
+                query = text("""
+                SELECT * 
+                FROM aggregate_interaction;
+                """
+                )
+                result = conn.execute(query)
+                count = [r[0:] for r in result]
 
-def aggregate_user(session_id,client_id):
+                # result to dataframe
+                df = pd.DataFrame(count, columns = ['client_id','interaction_count'])
+                filename = str("aggregate_interaction_" + time.strftime('%Y-%m-%d %H-%S') + ".csv")
+                df.to_csv(filename,index=False)
+                print("aggregate_interaction csv file downloaded!") 
+
+                # grab and add file location back to data_request table
+                file_path = os.path.abspath(filename)
+                update_data_request(request_id, 1, file_path)
+
+                # return True if aggregation function completed and csv got downloaded
+                return True
+
+    except Exception as e:
+        # return False and print error messages
+        print(e)
+        return False
+    
+
+def aggregate_user(session_id, client_id, request_id):
     # aggregate by users
     try:
         with engine.connect()as conn:
             with conn.begin(): 
                 query = text("""
-                DROP TABLE IF EXISTS `komodo`.`aggregate_user`;
+                DROP TABLE IF EXISTS `aggregate_user`;
                 """
                 )
 
@@ -101,7 +127,7 @@ def aggregate_user(session_id,client_id):
         
             with conn.begin(): 
                 query = text("""
-                CREATE TABLE if not exists aggregate_user 
+                CREATE TABLE if not exists `aggregate_user`
                 (
                 entity_type varchar(20) not null,
                 primary key (entity_type),
@@ -125,48 +151,33 @@ def aggregate_user(session_id,client_id):
 
                 conn.execute(query,{"session_id":session_id, "client_id":client_id})
 
-            with conn.begin(): 
+            with conn.begin():
                 query = text("""
-                UPDATE komodo.aggregate_user
-                SET entity_type = replace(replace(replace(replace(entity_type, 0, 'head'), 1, 'left_hand'), 2, 'right_hand'), 3 ,'spawned_entity');
+                SELECT * 
+                FROM aggregate_user;
                 """
                 )
+                result = conn.execute(query)
+                count = [r[0:] for r in result]
 
-                conn.execute(query)
+                # result to dataframe
+                df = pd.DataFrame(count, columns = ['entity_type','user_count'])
+                filename = str("aggregate_user_" + time.strftime('%Y-%m-%d %H-%S') + ".csv")
+                df.to_csv(filename,index=False)
 
-    except ValueError:
-        return "Argument(s) missing for aggregate_user."
+                # grab and add file back to data_request table
+                file_path = os.path.abspath(filename)
+                print("aggregate_user csv file downloaded!") 
+                update_data_request(request_id, 1, file_path)
+                
+                # return True if aggregation function completed and csv got downloaded
+                return True
 
-    return True
+    except Exception as e:
+        # return False and print error messages
+        print(e)
+        return False
 
-
-def user_energy(session_id,client_id, entity_type):
-    try:
-        with engine.connect() as conn:
-            query = text("""
-        select session_id, entity_type, timestamp, energy,       
-		        row_number() over (partition by entity_type order by energy desc) as energy_rank 
-        from 
-	        (select session_id, client_id, message->'$.entityType' as entity_type,
-			        message->'$.pos' as position, 
-			        SQRT(POWER( message->'$.pos.x' - LAG(message->'$.pos.x',1) OVER (order by seq),2)+
-			        POWER( message->'$.pos.y' - LAG(message->'$.pos.y',1) OVER (order by seq),2)+
-			        POWER( message->'$.pos.z' - LAG(message->'$.pos.z',1) OVER (order by seq),2))/(ts - LAG(ts,1) OVER (order by seq)) as energy,
-			        ts as timestamp, seq
-	        from data
-	        where message->'$.clientId' = :client_id and session_id = :session_id and `type` = 'sync' 
-	        order by seq) as user_energy
-        where energy is not null
-        order by energy_rank, entity_type, energy DESC;
-
-            """
-            )
-
-            result = conn.execute(query,{"session_id":session_id, "client_id":client_id, "entity_type":entity_type})
-    except ValueError:
-        return "Argument(s) missing for user_energy."
-
-    return True
 
 def process_file(id, file):
     print("Processing file:", file)
@@ -202,7 +213,116 @@ def mark_as_processed(capture_id, success):
     except Exception as e:
         print(e)
 
-        
+
+def check_for_data_requests_table():
+    # check if data_requests exist, if not, create one 
+    try:
+        with engine.connect() as conn:
+            with conn.begin():  
+                query = """
+                        show tables like 'data_requests';
+                        """
+                result = conn.execute(query)
+                exist = list([r[0] for r in result])
+
+        if not (bool(exist)):
+            with engine.connect()as conn:
+                with conn.begin(): 
+                    query = text("""
+                    CREATE TABLE if not exists `data_requests`
+                    (
+                    request_id int NOT NULL AUTO_INCREMENT,
+                    processed_capture_id varchar(50) not null,
+                    who_requested int not null,
+                    aggregation_function varchar(50) not null,
+                    is_it_fulfilled int,
+                    url varchar(255),
+                    message JSON,
+                    file_location varchar(255),
+                    primary key (request_id)
+                    );
+                    """
+                    )
+
+                    conn.execute(query)
+
+                with conn.begin(): 
+                    query = text("""
+                    INSERT INTO data_requests (`processed_capture_id`, `who_requested`, `aggregation_function`, `is_it_fulfilled`,`message`)
+                    VALUES ('666_9999999999999', 2, 'this_is_test_function', 1,'{"sessionId": 666, "clientId": 888, "captureId": 777, "type": "test function", "interactionType": 1,"entityType": 0}');
+                    """
+                    )
+                    conn.execute(query)
+
+            print("data_requests table created.")
+            return True
+        else: 
+            print("data_requests table exists.")
+            return True
+
+    except Exception as e:
+        # return False and print error messages
+        print(e)
+        return False
+
+
+def aggregation_file_download():
+    with engine.connect() as conn:
+        with conn.begin(): 
+            query = text("""
+            select request_id, aggregation_function, is_it_fulfilled, message->'$.clientId' as client_id,
+	                message->'$.sessionId'  as session_id, message->'$.entityType'  as entity_type,
+	                message->'$.interactionType'  as interaction_type
+            from data_requests
+            where is_it_fulfilled = 0
+            order by request_id;
+            """
+            )
+            result = conn.execute(query)
+            count = [r[0:] for r in result]
+
+            temp_df = pd.DataFrame(count, columns = ['request_id','aggregation_function','is_it_fulfilled','client_id','session_id','entity_type','interaction_type'])
+            temp_df.set_index("request_id",inplace = True)
+
+            # iterate rows in data_request table
+            for index, row in temp_df.iterrows():
+                request_id = index
+                # parse all inputs 
+                aggregation_function = row['aggregation_function']
+                is_it_fulfilled = row['is_it_fulfilled']
+                client_id = row['client_id']
+                session_id = row['session_id']
+                entity_type = row['entity_type']
+                interaction_type = row['interaction_type']
+
+                # direct rows to functions and download CSV
+                if aggregation_function == "aggregate_interaction_type":
+                    if (session_id!= "null" and interaction_type!= "null"):
+                        aggregate_interaction_type(session_id,interaction_type,request_id)
+                    else: 
+                        print("Argument(s) for aggregate_interaction not valid!")
+                if aggregation_function == "aggregate_user":
+                    if (client_id!= "null" and session_id!= "null"):
+                        aggregate_user(session_id,client_id,request_id)
+                    else: 
+                        print("Argument(s) for aggregate_user not valid!")
+                   
+
+def update_data_request(request_id,fulfilled_flag,file_location):
+    # update fulfilled flag to 1, once aggregation function completed and csv files got downloaded
+    try:
+        query = text("""
+                    UPDATE `data_requests`
+                    SET is_it_fulfilled = :f, file_location = :fl
+                    where request_id = :ri;
+                    """)
+        with engine.connect() as conn:
+            result = conn.execute(query, {'f': fulfilled_flag, 'fl': file_location,'ri':request_id})
+
+    except Exception as e:
+        print(e)
+
+
 if __name__ == "__main__":
 
     # infinite poll & process
@@ -221,6 +341,11 @@ if __name__ == "__main__":
             print('Nothing to process', time.strftime("%H:%M:%S", time.localtime()))
             # rinse & repeat
             time.sleep(10)
+        
+        # check data_request table and direct to respective functions
+        if check_for_data_requests_table():
+            aggregation_file_download()
+
 
 
 
