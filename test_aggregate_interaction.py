@@ -54,25 +54,8 @@ class TestQuery(unittest.TestCase):
                 count = [r[1:] for r in result]
                 sum = np.sum(count)
 
-        # aggregate_user testing
-        user_flag = process.aggregate_user(126,5,2) 
-
-        with engine.connect() as conn:
-            with conn.begin(): 
-                query = text("""
-                SELECT * 
-                FROM aggregate_user;
-                """
-                )
-                result = conn.execute(query)
-                count = [r[1:] for r in result]
-                print(count)
-                sum2 = np.sum(count)
-
-
         # aggregate_interaction
         self.assertEqual(sum, 1288) 
-        # aggregate_user
-        self.assertEqual(sum2, 16797) 
+
 
 
