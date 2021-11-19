@@ -365,6 +365,8 @@ def update_data_request(request_id,fulfilled_flag,file_location):
 
 
 if __name__ == "__main__":
+    # get result flag for checking data_request table
+    data_request_flag = check_for_data_requests_table()
 
     # infinite poll & process
     while True:
@@ -384,7 +386,7 @@ if __name__ == "__main__":
             time.sleep(10)
         
         # check data_request table and direct to respective functions
-        if check_for_data_requests_table():
+        if data_request_flag:
             aggregation_file_download()
 
 
