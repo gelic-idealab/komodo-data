@@ -55,7 +55,7 @@ class TestQuery(unittest.TestCase):
                 sum = np.sum(count)
 
         # aggregate_interaction
-        self.assertEqual(sum, 4476) 
+        self.assertEqual(sum, 1288) 
 
 
 
