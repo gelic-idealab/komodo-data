@@ -55,6 +55,6 @@ class TestQuery(unittest.TestCase):
                 sum = np.sum(count)
 
         # aggregate_user
-        self.assertEqual(sum, 16797) 
+        self.assertEqual(sum, 67188) 
 
 

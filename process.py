@@ -49,6 +49,7 @@ def check_for_unprocessed_captures():
 
     return ready
 
+# for each client, aggregate each interaction type and show counts in one session
 def aggregate_interaction_type(session_id, interaction_type, request_id):
     try: 
         # aggregate by interaction types 
@@ -73,6 +74,7 @@ def aggregate_interaction_type(session_id, interaction_type, request_id):
 
                 conn.execute(query)
 
+            # insert query results to aggregation_interaction table
             with conn.begin(): 
                 query = text("""
                 INSERT INTO aggregate_interaction 
@@ -112,7 +114,7 @@ def aggregate_interaction_type(session_id, interaction_type, request_id):
         print(e)
         return False
     
-
+# for each entity_type, show each client's activity in one session
 def aggregate_user(session_id, client_id, request_id):
     # aggregate by users
     try:
@@ -138,6 +140,7 @@ def aggregate_user(session_id, client_id, request_id):
 
                 conn.execute(query)
 
+            # insert query result to table
             with conn.begin(): 
                 query = text("""
                 INSERT INTO aggregate_user 
@@ -178,6 +181,7 @@ def aggregate_user(session_id, client_id, request_id):
         print(e)
         return False
 
+# calculate user energy for each entity type
 def user_energy(session_id,client_id, entity_type,request_id):
     try:
         with engine.connect() as conn:
@@ -200,9 +204,13 @@ def user_energy(session_id,client_id, entity_type,request_id):
 
             result = conn.execute(query,{"session_id":session_id, "client_id":client_id, "entity_type":entity_type})
             count = [r[0:] for r in result]
+
+            # record results in a dataframe
             df = pd.DataFrame(count, columns = ['client_d','session_id','timestamp','entity_type','energy'])
             filename = str("user_energy_" + time.strftime('%Y-%m-%d %H-%S') + ".csv")
             df.to_csv(filename,index=False)
+
+            # grab and add file back to data_request table
             file_path = os.path.abspath(filename)            
             print("user energy csv file downloaded!")
             update_data_request(request_id, 1, file_path)
