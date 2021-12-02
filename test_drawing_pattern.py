@@ -58,7 +58,7 @@ class TestQuery(unittest.TestCase):
                 result = conn.execute(query)
                 count = [r[0] for r in result]
                 
-        self.assertEqual(len(count), 29559) 
+        self.assertEqual(len(count), 37650)
 
 
 

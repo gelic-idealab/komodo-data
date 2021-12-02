@@ -398,6 +398,36 @@ def drawing_pattern():
 
                 conn.execute(query)
 
+                # get result and return 
+                result = conn.execute(query)
+                count = [r[0:] for r in result]
+
+                return True
+
+    except Exception as e:
+        # return False and print error messages
+        print(e)
+        return False
+        
+
+# get the number of times where users have the same positions at different times.
+def user_proximity():
+    try: 
+        with engine.connect() as conn:
+            with conn.begin(): 
+                query = text("""
+                SELECT message->'$.pos' AS position, count(distinct ts) AS timestamp_count
+                FROM data
+                WHERE message->'$.pos' IS NOT NULL
+                GROUP BY message->'$.pos'
+                HAVING timestamp_count > 1
+                ORDER BY timestamp_count;
+                """
+                )
+
+                conn.execute(query)
+
+                # get result and return 
                 result = conn.execute(query)
                 count = [r[0:] for r in result]
 
