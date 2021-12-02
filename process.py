@@ -381,6 +381,34 @@ def update_data_request(request_id,fulfilled_flag,file_location):
         print(e)
 
 
+ # show how stroke_id, stroke_type were used between timestamps
+def drawing_pattern():
+    try: 
+        with engine.connect() as conn:
+            with conn.begin(): 
+                query = text("""
+                SELECT ts AS timestamp,
+		               count(message->'$.strokeType') AS stroke_type_count, 
+		               count(message->'$.strokeId') AS stroke_id_count
+                FROM data
+                GROUP BY ts
+                ORDER BY stroke_type_count DESC;
+                """
+                )
+
+                conn.execute(query)
+
+                result = conn.execute(query)
+                count = [r[0:] for r in result]
+
+                return True
+
+    except Exception as e:
+        # return False and print error messages
+        print(e)
+        return False
+        
+
 if __name__ == "__main__":
     # get result flag for checking data_request table
     data_request_flag = check_for_data_requests_table()
