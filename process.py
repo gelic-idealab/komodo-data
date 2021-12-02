@@ -410,7 +410,7 @@ def drawing_pattern():
         return False
         
 
-# get the number of times where users have the same positions at different times.
+# get the number of times where users have the same positions. 
 def user_proximity():
     try: 
         with engine.connect() as conn:
