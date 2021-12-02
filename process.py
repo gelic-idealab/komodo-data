@@ -156,6 +156,15 @@ def aggregate_user(session_id, client_id, request_id):
 
             with conn.begin():
                 query = text("""
+                UPDATE komodo.aggregate_user
+                SET 
+                entity_type = replace(replace(replace(REPLACE(entity_type, 0, 'head'), 1, 'left_hand'), 2, 'right_hand'), 3 ,'spawned_entity');
+                """
+                )
+                conn.execute(query)
+
+            with conn.begin():
+                query = text("""
                 SELECT * 
                 FROM aggregate_user;
                 """
@@ -371,6 +380,64 @@ def update_data_request(request_id,fulfilled_flag,file_location):
     except Exception as e:
         print(e)
 
+
+ # show how stroke_id, stroke_type were used between timestamps
+def drawing_pattern():
+    try: 
+        with engine.connect() as conn:
+            with conn.begin(): 
+                query = text("""
+                SELECT ts AS timestamp,
+		               count(message->'$.strokeType') AS stroke_type_count, 
+		               count(message->'$.strokeId') AS stroke_id_count
+                FROM data
+                GROUP BY ts
+                ORDER BY stroke_type_count DESC;
+                """
+                )
+
+                conn.execute(query)
+
+                # get result and return 
+                result = conn.execute(query)
+                count = [r[0:] for r in result]
+
+                return True
+
+    except Exception as e:
+        # return False and print error messages
+        print(e)
+        return False
+        
+
+# get the number of times where users have the same positions. 
+def user_proximity():
+    try: 
+        with engine.connect() as conn:
+            with conn.begin(): 
+                query = text("""
+                SELECT message->'$.pos' AS position, count(distinct ts) AS timestamp_count
+                FROM data
+                WHERE message->'$.pos' IS NOT NULL
+                GROUP BY message->'$.pos'
+                HAVING timestamp_count > 1
+                ORDER BY timestamp_count;
+                """
+                )
+
+                conn.execute(query)
+
+                # get result and return 
+                result = conn.execute(query)
+                count = [r[0:] for r in result]
+
+                return True
+
+    except Exception as e:
+        # return False and print error messages
+        print(e)
+        return False
+        
 
 if __name__ == "__main__":
     # get result flag for checking data_request table
