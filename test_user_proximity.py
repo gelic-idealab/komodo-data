@@ -40,25 +40,32 @@ class TestQuery(unittest.TestCase):
             print(e)
             sys.exit(1)
 
-        # drawing_pattern testing
-        ts_count = process.user_proximity()
-        self.assertEqual(ts_count, True) 
-
         with engine.connect() as conn:
             with conn.begin(): 
                 query = text("""
-                SELECT message->'$.pos' AS position, count(distinct ts) AS timestamp_count
-                FROM data
-                WHERE message->'$.pos' IS NOT NULL
-                GROUP BY message->'$.pos'
-                HAVING timestamp_count > 1
-                ORDER BY timestamp_count;
+                SELECT ts, client_id, position, distance, capture_id, session_id
+                FROM(
+                    SELECT client_id, message->'$.pos' AS position, 
+                            SQRT(POWER( message->'$.pos.x' - LAG(message->'$.pos.x',1) OVER (order by ts,message->'$.pos'),2)+
+                            POWER( message->'$.pos.y' - LAG(message->'$.pos.y',1) OVER (order by ts,message->'$.pos'),2)+
+                            POWER( message->'$.pos.z' - LAG(message->'$.pos.z',1) OVER (order by ts,message->'$.pos'),2)) AS distance,
+                            capture_id, session_id, ts
+                    FROM data
+                    WHERE ts IN (SELECT ts
+                                FROM data
+                                GROUP BY ts
+                                HAVING count(distinct client_id) > 1)
+                    ORDER BY ts, position
+                    ) temp
+                    WHERE distance > 0 AND distance < 1
+                    ORDER BY distance;
                 """
                 )
                 result = conn.execute(query)
                 count = [r[0] for r in result]
                 
-        self.assertEqual(len(count), 35)
+        expected_list = [1630443517509, 1630443643045, 1630443643969, 1630443676792, 1630443611381]
+        self.assertEqual(count[0:5], expected_list)
 
 
 

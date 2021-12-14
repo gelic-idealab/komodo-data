@@ -410,13 +410,13 @@ def drawing_pattern():
         return False
         
 
-# get the number of times where users have the same positions. 
+# Get information when multiple users appear within a diameter
 def user_proximity(diameter):
     try: 
         with engine.connect() as conn:
             with conn.begin(): 
                 query = text("""
-                SELECT client_id, ts, position, distance, capture_id, session_id
+                SELECT ts, client_id, position, distance, capture_id, session_id
                 FROM(
                     SELECT client_id, message->'$.pos' AS position, 
                             SQRT(POWER( message->'$.pos.x' - LAG(message->'$.pos.x',1) OVER (order by ts,message->'$.pos'),2)+
@@ -426,11 +426,11 @@ def user_proximity(diameter):
                     FROM data
                     WHERE ts IN (SELECT ts
                                 FROM data
-                                GROUP BYts
+                                GROUP BY ts
                                 HAVING count(distinct client_id) > 1)
                     ORDER BY ts, position
                     ) temp
-                    WHERE distance > 0 AND distance < :diameter
+                    WHERE distance > 0 AND distance < (:diameter)
                     ORDER BY distance;
                 """
                 )
@@ -439,7 +439,6 @@ def user_proximity(diameter):
 
                 # get result and return 
                 result = conn.execute(query)
-                count = [r[0:] for r in result]
 
                 return True
 
