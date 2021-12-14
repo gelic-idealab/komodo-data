@@ -195,19 +195,19 @@ def user_energy(session_id,client_id, entity_type,request_id):
     try:
         with engine.connect() as conn:
             query = text("""
-            select client_id, session_id, timestamp,entity_type, energy
-            from 
-	            (select session_id, client_id, message->'$.entityType' as entity_type,
+            SELECT client_id, session_id, timestamp,entity_type, energy
+            FROM 
+	            (SELECT session_id, client_id, message->'$.entityType' as entity_type,
 			            message->'$.pos' as position, 
 			            SQRT(POWER( message->'$.pos.x' - LAG(message->'$.pos.x',1) OVER (order by seq),2)+
 			            POWER( message->'$.pos.y' - LAG(message->'$.pos.y',1) OVER (order by seq),2)+
-			            POWER( message->'$.pos.z' - LAG(message->'$.pos.z',1) OVER (order by seq),2))/(ts - LAG(ts,1) OVER (order by seq)) as energy,
-			            ts as timestamp, seq
-	            from data
-	            where message->'$.clientId' = :client_id and session_id = :session_id and `type` = 'sync' 
-	            order by seq) as user_energy
-            where energy is not null and entity_type = :entity_type
-            order by entity_type, energy DESC;
+			            POWER( message->'$.pos.z' - LAG(message->'$.pos.z',1) OVER (order by seq),2))/(ts - LAG(ts,1) OVER (order by seq)) AS energy,
+			            ts AS timestamp, seq
+	            FROM data
+	            WHERE message->'$.clientId' = :client_id AND session_id = :session_id AND `type` = 'sync' 
+	            ORDER BY seq) AS user_energy
+            WHERE energy IS NOT NULL AND entity_type = :entity_type
+            ORDER BY entity_type, energy DESC;
             """
             )
 
@@ -282,7 +282,7 @@ def check_for_data_requests_table():
                     query = text("""
                     CREATE TABLE if not exists `data_requests`
                     (
-                    request_id int NOT NULL AUTO_INCREMENT,
+                    request_id int not null AUTO_INCREMENT,
                     processed_capture_id varchar(50) not null,
                     who_requested int not null,
                     aggregation_function varchar(50) not null,
@@ -321,12 +321,12 @@ def aggregation_file_download():
     with engine.connect() as conn:
         with conn.begin(): 
             query = text("""
-            select request_id, aggregation_function, is_it_fulfilled, message->'$.clientId' as client_id,
+            SELECT request_id, aggregation_function, is_it_fulfilled, message->'$.clientId' as client_id,
 	                message->'$.sessionId'  as session_id, message->'$.entityType'  as entity_type,
 	                message->'$.interactionType'  as interaction_type
-            from data_requests
-            where is_it_fulfilled = 0
-            order by request_id;
+            FROM data_requests
+            WHERE is_it_fulfilled = 0
+            ORDER BY request_id;
             """
             )
             result = conn.execute(query)
@@ -372,7 +372,7 @@ def update_data_request(request_id,fulfilled_flag,file_location):
         query = text("""
                     UPDATE `data_requests`
                     SET is_it_fulfilled = :f, file_location = :fl
-                    where request_id = :ri;
+                    WHERE request_id = :ri;
                     """)
         with engine.connect() as conn:
             result = conn.execute(query, {'f': fulfilled_flag, 'fl': file_location,'ri':request_id})
@@ -416,12 +416,22 @@ def user_proximity():
         with engine.connect() as conn:
             with conn.begin(): 
                 query = text("""
-                SELECT message->'$.pos' AS position, count(distinct ts) AS timestamp_count
-                FROM data
-                WHERE message->'$.pos' IS NOT NULL
-                GROUP BY message->'$.pos'
-                HAVING timestamp_count > 1
-                ORDER BY timestamp_count;
+                SELECT client_id, ts, position, distance, capture_id, session_id
+                FROM(
+                    SELECT client_id, message->'$.pos' AS position, 
+                            SQRT(POWER( message->'$.pos.x' - LAG(message->'$.pos.x',1) OVER (order by ts,message->'$.pos'),2)+
+                            POWER( message->'$.pos.y' - LAG(message->'$.pos.y',1) OVER (order by ts,message->'$.pos'),2)+
+                            POWER( message->'$.pos.z' - LAG(message->'$.pos.z',1) OVER (order by ts,message->'$.pos'),2)) AS distance,
+                            capture_id, session_id, ts
+                    FROM data
+                    WHERE ts IN (SELECT ts
+                                FROM data
+                                GROUP BYts
+                                HAVING count(distinct client_id) > 1)
+                    ORDER BY ts, position
+                    ) temp
+                    WHERE distance > 0 AND distance < 1
+                    ORDER BY distance;
                 """
                 )
 
@@ -437,7 +447,6 @@ def user_proximity():
         # return False and print error messages
         print(e)
         return False
-        
 
 if __name__ == "__main__":
     # get result flag for checking data_request table
