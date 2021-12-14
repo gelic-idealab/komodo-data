@@ -81,7 +81,7 @@ def aggregate_interaction_type(session_id, interaction_type, request_id):
                 SELECT client_id, count(message) as interaction_count
                 FROM data
                 WHERE message->'$.interactionType' = :interaction_type and session_id= :session_id
-                group by client_id;
+                GROUP BY client_id;
                 """
                 )
 
@@ -411,7 +411,7 @@ def drawing_pattern():
         
 
 # get the number of times where users have the same positions. 
-def user_proximity():
+def user_proximity(diameter):
     try: 
         with engine.connect() as conn:
             with conn.begin(): 
@@ -430,12 +430,12 @@ def user_proximity():
                                 HAVING count(distinct client_id) > 1)
                     ORDER BY ts, position
                     ) temp
-                    WHERE distance > 0 AND distance < 1
+                    WHERE distance > 0 AND distance < :diameter
                     ORDER BY distance;
                 """
                 )
 
-                conn.execute(query)
+                conn.execute(query,{"diameter":diameter})
 
                 # get result and return 
                 result = conn.execute(query)
