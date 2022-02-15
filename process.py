@@ -13,7 +13,7 @@ from sqlalchemy.sql.expression import null
 # import db configs
 from config import *
 
-CAPTURE_FILE_NAME = 'data'
+CAPTURE_FILE_NAME = 'data.json'
 
 if len(CAPTURES_DIR) <= 0:
     print("No captures directory declared in config.py. Exiting.")
